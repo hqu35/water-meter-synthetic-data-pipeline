@@ -1,0 +1,16 @@
+{
+  "worker": "flux2",
+  "gpu_device": 2,
+  "dashboard_host": "127.0.0.1",
+  "dashboard_port": 9000,
+  "comfyui_url": "http://127.0.0.1:8188",
+  "workflow": "workflow/image_flux2_api.json",
+  "workflow_inputs": {
+    "image_node": "46",
+    "mask_node": "126",
+    "prompt_node": "68:6",
+    "seed_node": "68:25",
+    "size_node": "68:133",
+    "save_node": "9"
+  }
+}

@@ -1,0 +1,152 @@
+{
+  "info": {
+    "description": "Single-image COCO-OBB validation converted from the same latest PBR render metadata; no boxes were inferred or regenerated.",
+    "source_metadata": "latest_pbr_metadata.json",
+    "seed": "latest_pbr_annotation_20260721"
+  },
+  "images": [
+    {
+      "id": 1,
+      "file_name": "latest_pbr.png",
+      "width": 512,
+      "height": 512,
+      "wheel_reading": "15881584"
+    }
+  ],
+  "annotations": [
+    {
+      "id": 1,
+      "image_id": 1,
+      "category_id": 1,
+      "obb": [
+        255.7917,
+        208.5293,
+        19.8279,
+        178.2749,
+        -1.5052
+      ]
+    },
+    {
+      "id": 2,
+      "image_id": 1,
+      "category_id": 2,
+      "obb": [
+        177.0527,
+        202.6324,
+        17.4394,
+        19.4945,
+        -1.505
+      ],
+      "pos": 0,
+      "gt_float": 1
+    },
+    {
+      "id": 3,
+      "image_id": 1,
+      "category_id": 2,
+      "obb": [
+        197.9174,
+        204.0996,
+        17.622,
+        19.8443,
+        -1.505
+      ],
+      "pos": 1,
+      "gt_float": 5
+    },
+    {
+      "id": 4,
+      "image_id": 1,
+      "category_id": 2,
+      "obb": [
+        219.2222,
+        205.5978,
+        17.8085,
+        20.2047,
+        -1.505
+      ],
+      "pos": 2,
+      "gt_float": 8
+    },
+    {
+      "id": 5,
+      "image_id": 1,
+      "category_id": 2,
+      "obb": [
+        240.9898,
+        207.1285,
+        17.9989,
+        20.5934,
+        -1.505
+      ],
+      "pos": 3,
+      "gt_float": 8
+    },
+    {
+      "id": 6,
+      "image_id": 1,
+      "category_id": 2,
+      "obb": [
+        263.2121,
+        208.6441,
+        18.1937,
+        21.0399,
+        -1.5005
+      ],
+      "pos": 4,
+      "gt_float": 1.781982
+    },
+    {
+      "id": 7,
+      "image_id": 1,
+      "category_id": 2,
+      "obb": [
+        285.927,
+        210.2018,
+        18.393,
+        21.5008,
+        -1.4969
+      ],
+      "pos": 5,
+      "gt_float": 5
+    },
+    {
+      "id": 8,
+      "image_id": 1,
+      "category_id": 2,
+      "obb": [
+        309.168,
+        211.8278,
+        18.5968,
+        21.9775,
+        -1.4963
+      ],
+      "pos": 6,
+      "gt_float": 8.830286
+    },
+    {
+      "id": 9,
+      "image_id": 1,
+      "category_id": 2,
+      "obb": [
+        332.9016,
+        213.4947,
+        18.8052,
+        22.5319,
+        -1.4963
+      ],
+      "pos": 7,
+      "gt_float": 4.620979
+    }
+  ],
+  "categories": [
+    {
+      "id": 1,
+      "name": "wheel"
+    },
+    {
+      "id": 2,
+      "name": "digit"
+    }
+  ]
+}

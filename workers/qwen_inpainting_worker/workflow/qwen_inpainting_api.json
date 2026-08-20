@@ -1,0 +1,372 @@
+{
+  "3": {
+    "inputs": {
+      "seed": 1020944769263147,
+      "steps": 20,
+      "cfg": 2.5,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 1,
+      "model": [
+        "66",
+        0
+      ],
+      "positive": [
+        "108",
+        0
+      ],
+      "negative": [
+        "108",
+        1
+      ],
+      "latent_image": [
+        "122",
+        0
+      ]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "KSampler"
+    }
+  },
+  "6": {
+    "inputs": {
+      "text": "The black masked water-meter region is protected and must remain unchanged.\n\nReplace only the editable white background with a realistic industrial utility room. Add aged concrete or plaster walls, surrounding plumbing pipes, subtle moisture stains, soft indoor industrial lighting, and realistic contact shadows around the protected meter boundary.\n\nContinue the existing pipe connectors naturally into the environment. Match the original camera perspective, scale, lighting direction, exposure, and color temperature.\n\nDo not place anything over the protected black region. Do not create another meter, gauge, dial, digit register, text, logo, valve, hand, tool, wire, or foreground obstruction.",
+      "clip": [
+        "38",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Positive Prompt)"
+    }
+  },
+  "7": {
+    "inputs": {
+      "text": "duplicate meter, second meter, duplicate digit register, second digit register, extra number window, repeated digits, changed digits, incorrect digits, shifted wheel, changed perspective, altered framing, distorted geometry, extra dial, hallucinated text",
+      "clip": [
+        "38",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Negative Prompt)"
+    }
+  },
+  "8": {
+    "inputs": {
+      "samples": [
+        "3",
+        0
+      ],
+      "vae": [
+        "39",
+        0
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "37": {
+    "inputs": {
+      "unet_name": "qwen_image_fp8_e4m3fn.safetensors",
+      "weight_dtype": "default"
+    },
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "Load Diffusion Model"
+    }
+  },
+  "38": {
+    "inputs": {
+      "clip_name": "qwen_2.5_vl_7b_fp8_scaled.safetensors",
+      "type": "qwen_image",
+      "device": "default"
+    },
+    "class_type": "CLIPLoader",
+    "_meta": {
+      "title": "Load CLIP"
+    }
+  },
+  "39": {
+    "inputs": {
+      "vae_name": "qwen_image_vae.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Load VAE"
+    }
+  },
+  "60": {
+    "inputs": {
+      "filename_prefix": "ComfyUI",
+      "images": [
+        "8",
+        0
+      ]
+    },
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "Save Image"
+    }
+  },
+  "66": {
+    "inputs": {
+      "shift": 3.1000000000000005,
+      "model": [
+        "37",
+        0
+      ]
+    },
+    "class_type": "ModelSamplingAuraFlow",
+    "_meta": {
+      "title": "ModelSamplingAuraFlow"
+    }
+  },
+  "71": {
+    "inputs": {
+      "image": "meter_original_0000.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "Load Image"
+    }
+  },
+  "76": {
+    "inputs": {
+      "pixels": [
+        "263",
+        0
+      ],
+      "vae": [
+        "39",
+        0
+      ]
+    },
+    "class_type": "VAEEncode",
+    "_meta": {
+      "title": "VAE Encode"
+    }
+  },
+  "84": {
+    "inputs": {
+      "control_net_name": "Qwen-Image-InstantX-ControlNet-Inpainting.safetensors"
+    },
+    "class_type": "ControlNetLoader",
+    "_meta": {
+      "title": "Load ControlNet Model"
+    }
+  },
+  "108": {
+    "inputs": {
+      "strength": 1,
+      "start_percent": 0,
+      "end_percent": 1,
+      "positive": [
+        "6",
+        0
+      ],
+      "negative": [
+        "7",
+        0
+      ],
+      "control_net": [
+        "84",
+        0
+      ],
+      "vae": [
+        "39",
+        0
+      ],
+      "image": [
+        "263",
+        0
+      ],
+      "mask": [
+        "121:253",
+        0
+      ]
+    },
+    "class_type": "ControlNetInpaintingAliMamaApply",
+    "_meta": {
+      "title": "ControlNetInpaintingAliMamaApply"
+    }
+  },
+  "122": {
+    "inputs": {
+      "samples": [
+        "76",
+        0
+      ],
+      "mask": [
+        "121:253",
+        0
+      ]
+    },
+    "class_type": "SetLatentNoiseMask",
+    "_meta": {
+      "title": "Set Latent Noise Mask"
+    }
+  },
+  "124": {
+    "inputs": {
+      "mask": [
+        "121:253",
+        0
+      ]
+    },
+    "class_type": "MaskPreview",
+    "_meta": {
+      "title": "Preview Mask"
+    }
+  },
+  "126": {
+    "inputs": {
+      "x": 0,
+      "y": 0,
+      "resize_source": false,
+      "destination": [
+        "263",
+        0
+      ],
+      "source": [
+        "8",
+        0
+      ],
+      "mask": [
+        "121:253",
+        0
+      ]
+    },
+    "class_type": "ImageCompositeMasked",
+    "_meta": {
+      "title": "Image Composite Masked"
+    }
+  },
+  "163": {
+    "inputs": {
+      "filename_prefix": "ComfyUI",
+      "images": [
+        "126",
+        0
+      ]
+    },
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "Save Image"
+    }
+  },
+  "263": {
+    "inputs": {
+      "resize_type": "scale dimensions",
+      "resize_type.width": 512,
+      "resize_type.height": 512,
+      "resize_type.crop": "disabled",
+      "scale_method": "lanczos",
+      "input": [
+        "71",
+        0
+      ]
+    },
+    "class_type": "ResizeImageMaskNode",
+    "_meta": {
+      "title": "Resize Image/Mask"
+    }
+  },
+  "266": {
+    "inputs": {
+      "image": "meter_original_0000_mask.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "Load Image"
+    }
+  },
+  "267": {
+    "inputs": {
+      "resize_type": "scale dimensions",
+      "resize_type.width": 512,
+      "resize_type.height": 512,
+      "resize_type.crop": "disabled",
+      "scale_method": "lanczos",
+      "input": [
+        "266",
+        0
+      ]
+    },
+    "class_type": "ResizeImageMaskNode",
+    "_meta": {
+      "title": "Resize Image/Mask"
+    }
+  },
+  "268": {
+    "inputs": {
+      "channel": "red",
+      "image": [
+        "267",
+        0
+      ]
+    },
+    "class_type": "ImageToMask",
+    "_meta": {
+      "title": "Convert Image to Mask"
+    }
+  },
+  "121:253": {
+    "inputs": {
+      "channel": "red",
+      "image": [
+        "121:252",
+        0
+      ]
+    },
+    "class_type": "ImageToMask",
+    "_meta": {
+      "title": "Convert Image to Mask"
+    }
+  },
+  "121:251": {
+    "inputs": {
+      "mask": [
+        "121:199",
+        0
+      ]
+    },
+    "class_type": "MaskToImage",
+    "_meta": {
+      "title": "Convert Mask to Image"
+    }
+  },
+  "121:199": {
+    "inputs": {
+      "expand": 4,
+      "tapered_corners": true,
+      "mask": [
+        "268",
+        0
+      ]
+    },
+    "class_type": "GrowMask",
+    "_meta": {
+      "title": "Grow Mask"
+    }
+  },
+  "121:252": {
+    "inputs": {
+      "blur_radius": 2,
+      "sigma": 1,
+      "image": [
+        "121:251",
+        0
+      ]
+    },
+    "class_type": "ImageBlur",
+    "_meta": {
+      "title": "Blur Image"
+    }
+  }
+}

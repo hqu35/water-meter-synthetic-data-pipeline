@@ -1,0 +1,17 @@
+{
+  "worker": "qwen_inpainting",
+  "gpu_device": 3,
+  "dashboard_host": "127.0.0.1",
+  "dashboard_port": 9001,
+  "comfyui_url": "http://127.0.0.1:8191",
+  "workflow": "workflow/qwen_inpainting_api.json",
+  "workflow_inputs": {
+    "image_node": "71",
+    "mask_node": "266",
+    "prompt_node": "6",
+    "seed_node": "3",
+    "raw_save_node": "60",
+    "final_save_node": "163",
+    "resize_node": "263"
+  }
+}

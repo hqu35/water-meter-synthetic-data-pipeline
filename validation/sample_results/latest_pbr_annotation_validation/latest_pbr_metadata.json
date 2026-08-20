@@ -1,0 +1,1088 @@
+{
+  "seed": "latest_pbr_annotation_20260721",
+  "preset": "industrial_window",
+  "family": "industrial_window",
+  "layout_preset": "industrial_a",
+  "size": [
+    512,
+    512
+  ],
+  "mode": "three-js-3d-front-view",
+  "occupied": 11,
+  "digit_count": 8,
+  "digit_count_source": "seeded_weighted_70_30",
+  "red_digit_count": 3,
+  "register_glyph_diagnostics": {
+    "font": "800 1027.2px Arial Black, Arial, Helvetica, sans-serif",
+    "fontFamily": "Arial Black, Arial, Helvetica, sans-serif",
+    "fontWeight": "800",
+    "rasterScale": 2,
+    "glyphBoxWidth": 361.1827782121106,
+    "cellHeight": 428,
+    "targetBounds": {
+      "xMin": 36.11827782121106,
+      "xMax": 332.28815595514175,
+      "yMin": 42.800000000000004,
+      "yMax": 385.2
+    },
+    "targetVisibleWidth": 296.1698781339307,
+    "targetVisibleHeight": 342.4,
+    "widthVariation": 0,
+    "heightVariation": 0,
+    "digits": [
+      {
+        "glyph": "0",
+        "rasterBounds": {
+          "xMin": 384,
+          "xMax": 985,
+          "yMin": 225,
+          "yMax": 985
+        },
+        "rawVisibleWidth": 602,
+        "rawVisibleHeight": 761,
+        "scaleX": 0.4919765417507154,
+        "scaleY": 0.44993429697766096,
+        "finalVisibleWidth": 296.1698781339307,
+        "finalVisibleHeight": 342.4,
+        "targetBounds": {
+          "xMin": 36.11827782121106,
+          "xMax": 332.28815595514175,
+          "yMin": 42.800000000000004,
+          "yMax": 385.2
+        }
+      },
+      {
+        "glyph": "1",
+        "rasterBounds": {
+          "xMin": 426,
+          "xMax": 847,
+          "yMin": 225,
+          "yMax": 973
+        },
+        "rawVisibleWidth": 422,
+        "rawVisibleHeight": 749,
+        "scaleX": 0.7018243557676083,
+        "scaleY": 0.45714285714285713,
+        "finalVisibleWidth": 296.1698781339307,
+        "finalVisibleHeight": 342.4,
+        "targetBounds": {
+          "xMin": 36.11827782121106,
+          "xMax": 332.28815595514175,
+          "yMin": 42.800000000000004,
+          "yMax": 385.2
+        }
+      },
+      {
+        "glyph": "2",
+        "rasterBounds": {
+          "xMin": 369,
+          "xMax": 982,
+          "yMin": 225,
+          "yMax": 973
+        },
+        "rawVisibleWidth": 614,
+        "rawVisibleHeight": 749,
+        "scaleX": 0.4823613650389751,
+        "scaleY": 0.45714285714285713,
+        "finalVisibleWidth": 296.1698781339307,
+        "finalVisibleHeight": 342.4,
+        "targetBounds": {
+          "xMin": 36.11827782121106,
+          "xMax": 332.28815595514175,
+          "yMin": 42.800000000000004,
+          "yMax": 385.2
+        }
+      },
+      {
+        "glyph": "3",
+        "rasterBounds": {
+          "xMin": 378,
+          "xMax": 985,
+          "yMin": 225,
+          "yMax": 985
+        },
+        "rawVisibleWidth": 608,
+        "rawVisibleHeight": 761,
+        "scaleX": 0.4871215100887018,
+        "scaleY": 0.44993429697766096,
+        "finalVisibleWidth": 296.1698781339307,
+        "finalVisibleHeight": 342.4,
+        "targetBounds": {
+          "xMin": 36.11827782121106,
+          "xMax": 332.28815595514175,
+          "yMin": 42.800000000000004,
+          "yMax": 385.2
+        }
+      },
+      {
+        "glyph": "4",
+        "rasterBounds": {
+          "xMin": 363,
+          "xMax": 1005,
+          "yMin": 225,
+          "yMax": 973
+        },
+        "rawVisibleWidth": 643,
+        "rawVisibleHeight": 749,
+        "scaleX": 0.46060634235448006,
+        "scaleY": 0.45714285714285713,
+        "finalVisibleWidth": 296.1698781339307,
+        "finalVisibleHeight": 342.4,
+        "targetBounds": {
+          "xMin": 36.11827782121106,
+          "xMax": 332.28815595514175,
+          "yMin": 42.800000000000004,
+          "yMax": 385.2
+        }
+      },
+      {
+        "glyph": "5",
+        "rasterBounds": {
+          "xMin": 376,
+          "xMax": 987,
+          "yMin": 238,
+          "yMax": 985
+        },
+        "rawVisibleWidth": 612,
+        "rawVisibleHeight": 748,
+        "scaleX": 0.4839377093691678,
+        "scaleY": 0.4577540106951871,
+        "finalVisibleWidth": 296.1698781339307,
+        "finalVisibleHeight": 342.4,
+        "targetBounds": {
+          "xMin": 36.11827782121106,
+          "xMax": 332.28815595514175,
+          "yMin": 42.800000000000004,
+          "yMax": 385.2
+        }
+      },
+      {
+        "glyph": "6",
+        "rasterBounds": {
+          "xMin": 385,
+          "xMax": 991,
+          "yMin": 225,
+          "yMax": 985
+        },
+        "rawVisibleWidth": 607,
+        "rawVisibleHeight": 761,
+        "scaleX": 0.4879240166951082,
+        "scaleY": 0.44993429697766096,
+        "finalVisibleWidth": 296.1698781339307,
+        "finalVisibleHeight": 342.4,
+        "targetBounds": {
+          "xMin": 36.11827782121106,
+          "xMax": 332.28815595514175,
+          "yMin": 42.800000000000004,
+          "yMax": 385.2
+        }
+      },
+      {
+        "glyph": "7",
+        "rasterBounds": {
+          "xMin": 388,
+          "xMax": 984,
+          "yMin": 238,
+          "yMax": 973
+        },
+        "rawVisibleWidth": 597,
+        "rawVisibleHeight": 736,
+        "scaleX": 0.49609694829804135,
+        "scaleY": 0.4652173913043478,
+        "finalVisibleWidth": 296.1698781339307,
+        "finalVisibleHeight": 342.4,
+        "targetBounds": {
+          "xMin": 36.11827782121106,
+          "xMax": 332.28815595514175,
+          "yMin": 42.800000000000004,
+          "yMax": 385.2
+        }
+      },
+      {
+        "glyph": "8",
+        "rasterBounds": {
+          "xMin": 384,
+          "xMax": 985,
+          "yMin": 225,
+          "yMax": 985
+        },
+        "rawVisibleWidth": 602,
+        "rawVisibleHeight": 761,
+        "scaleX": 0.4919765417507154,
+        "scaleY": 0.44993429697766096,
+        "finalVisibleWidth": 296.1698781339307,
+        "finalVisibleHeight": 342.4,
+        "targetBounds": {
+          "xMin": 36.11827782121106,
+          "xMax": 332.28815595514175,
+          "yMin": 42.800000000000004,
+          "yMax": 385.2
+        }
+      },
+      {
+        "glyph": "9",
+        "rasterBounds": {
+          "xMin": 378,
+          "xMax": 983,
+          "yMin": 225,
+          "yMax": 985
+        },
+        "rawVisibleWidth": 606,
+        "rawVisibleHeight": 761,
+        "scaleX": 0.48872917183816944,
+        "scaleY": 0.44993429697766096,
+        "finalVisibleWidth": 296.1698781339307,
+        "finalVisibleHeight": 342.4,
+        "targetBounds": {
+          "xMin": 36.11827782121106,
+          "xMax": 332.28815595514175,
+          "yMin": 42.800000000000004,
+          "yMax": 385.2
+        }
+      }
+    ]
+  },
+  "dial_count": 1,
+  "texture_mode": "random",
+  "texture_set": "Metal021",
+  "texture_loaded": true,
+  "pbr_repeat": {
+    "metalHousing": [
+      1,
+      1
+    ],
+    "metalBezel": [
+      1,
+      1
+    ],
+    "metalConnector": [
+      2,
+      1
+    ],
+    "metalMechanical": [
+      1,
+      1
+    ]
+  },
+  "pbr_extrude_uv_normalized": true,
+  "pbr_extrude_uv_stats": [
+    {
+      "role": "metalHousing",
+      "before": {
+        "minU": -29.10813331604004,
+        "maxU": 29.10813331604004,
+        "minV": -19.485340118408203,
+        "maxV": 19.485340118408203
+      },
+      "after": {
+        "minU": 0.00852863397449255,
+        "maxU": 0.9914713501930237,
+        "minV": 0.012384305708110332,
+        "maxV": 0.987615704536438
+      },
+      "convertedToNonIndexed": false
+    },
+    {
+      "role": "metalHousing",
+      "before": {
+        "minU": -29.10813331604004,
+        "maxU": 29.10813331604004,
+        "minV": -19.485340118408203,
+        "maxV": 19.485340118408203
+      },
+      "after": {
+        "minU": 0.00852863397449255,
+        "maxU": 0.9914713501930237,
+        "minV": 0.012384305708110332,
+        "maxV": 0.987615704536438
+      },
+      "convertedToNonIndexed": false
+    },
+    {
+      "role": "metalHousing",
+      "before": {
+        "minU": -29.10813331604004,
+        "maxU": 29.10813331604004,
+        "minV": -19.485340118408203,
+        "maxV": 19.485340118408203
+      },
+      "after": {
+        "minU": 0.00852863397449255,
+        "maxU": 0.9914713501930237,
+        "minV": 0.012384305708110332,
+        "maxV": 0.987615704536438
+      },
+      "convertedToNonIndexed": false
+    },
+    {
+      "role": "metalHousing",
+      "before": {
+        "minU": -29.10813331604004,
+        "maxU": 29.10813331604004,
+        "minV": -19.485340118408203,
+        "maxV": 19.485340118408203
+      },
+      "after": {
+        "minU": 0.00852863397449255,
+        "maxU": 0.9914713501930237,
+        "minV": 0.012384305708110332,
+        "maxV": 0.987615704536438
+      },
+      "convertedToNonIndexed": false
+    },
+    {
+      "role": "metalHousing",
+      "before": {
+        "minU": -29.10813331604004,
+        "maxU": 29.10813331604004,
+        "minV": -19.485340118408203,
+        "maxV": 19.485340118408203
+      },
+      "after": {
+        "minU": 0.00852863397449255,
+        "maxU": 0.9914713501930237,
+        "minV": 0.012384305708110332,
+        "maxV": 0.987615704536438
+      },
+      "convertedToNonIndexed": false
+    },
+    {
+      "role": "metalHousing",
+      "before": {
+        "minU": -267.7721862792969,
+        "maxU": 267.7721862792969,
+        "minV": -36,
+        "maxV": 36
+      },
+      "after": {
+        "minU": 0.0009778857929632068,
+        "maxU": 0.9990221261978149,
+        "minV": 0.0069736298173666,
+        "maxV": 0.9930263757705688
+      },
+      "convertedToNonIndexed": false
+    },
+    {
+      "role": "metalMechanical",
+      "before": {
+        "minU": -196.64520263671875,
+        "maxU": 196.64520263671875,
+        "minV": -30.799999237060547,
+        "maxV": 29
+      },
+      "after": {
+        "minU": 0.0013283425942063332,
+        "maxU": 0.9986716508865356,
+        "minV": 0.00855854619294405,
+        "maxV": 0.9914414286613464
+      },
+      "convertedToNonIndexed": false
+    },
+    {
+      "role": "metalBezel",
+      "before": {
+        "minU": -418.39404296875,
+        "maxU": 418.39404296875,
+        "minV": -418.39404296875,
+        "maxV": 418.39404296875
+      },
+      "after": {
+        "minU": 0.0009255189797841012,
+        "maxU": 0.9990746378898621,
+        "minV": 0.0009255182812921703,
+        "maxV": 0.9990744590759277
+      },
+      "convertedToNonIndexed": false
+    },
+    {
+      "role": "metalDetail",
+      "before": {
+        "minU": -34.3637580871582,
+        "maxU": 34.36945343017578,
+        "minV": -31.662952423095703,
+        "maxV": 31.489500045776367
+      },
+      "after": {
+        "minU": 0,
+        "maxU": 1,
+        "minV": 0,
+        "maxV": 0.9877275824546814
+      },
+      "convertedToNonIndexed": false
+    },
+    {
+      "role": "metalMechanical",
+      "before": {
+        "minU": -15.198217391967773,
+        "maxU": 15.198217391967773,
+        "minV": -15.198217391967773,
+        "maxV": 15.198217391967773
+      },
+      "after": {
+        "minU": 0.013158201240003109,
+        "maxU": 0.9868448972702026,
+        "minV": 0,
+        "maxV": 1
+      },
+      "convertedToNonIndexed": false
+    }
+  ],
+  "face_plate": {
+    "key": "silver",
+    "color": 12172993,
+    "dark": false,
+    "selection_source": "seeded"
+  },
+  "lighting_mode": "reduced",
+  "environmentMode": "random",
+  "requestedEnvironmentKey": null,
+  "selectedEnvironmentKey": "industrial_pipe_valve",
+  "environmentLoaded": true,
+  "environmentFallback": false,
+  "environmentIntensity": 0.845666598342359,
+  "environmentRotation": 0,
+  "lightingWithEnvironment": "current",
+  "textured_roles": [
+    "metalHousing",
+    "metalBezel",
+    "metalConnector",
+    "metalMechanical"
+  ],
+  "textured_components": [
+    "center_gear",
+    "screws"
+  ],
+  "metal_detail_texture": "Metal021",
+  "layout_validation": {
+    "valid": true,
+    "family": "industrial_window",
+    "layout_preset": "industrial_a",
+    "digit_count": 8,
+    "dial_count": 1,
+    "register": {
+      "x": -243.26214410349365,
+      "y": 100.19056887672573,
+      "w": 486.5242882069873,
+      "h": 58.74283135894371
+    },
+    "center_gear": {
+      "x": 101.60682351678192,
+      "y": 22.915701587620422,
+      "r": 42.623204952973985,
+      "box": {
+        "x": 58.98361856380793,
+        "y": -19.707503365353563,
+        "w": 85.24640990594797,
+        "h": 85.24640990594797
+      }
+    },
+    "dials": [
+      {
+        "x": 79.48784723709521,
+        "y": -128.3279288906744,
+        "r": 60.43634365375094,
+        "box": {
+          "x": 9.051503583344271,
+          "y": -218.76427254442535,
+          "w": 140.87268730750188,
+          "h": 156.87268730750188
+        }
+      }
+    ],
+    "semantic_bands": {
+      "halfWidth": 305.542687834939,
+      "halfHeight": 305.542687834939,
+      "brand": {
+        "x": -305.542687834939,
+        "y": 189.43646645766216,
+        "w": 611.085375669878,
+        "h": 54.99768381028903
+      },
+      "register": {
+        "x": -305.542687834939,
+        "y": 88.6073794721323,
+        "w": 611.085375669878,
+        "h": 82.49652571543355
+      },
+      "gear": {
+        "x": -305.542687834939,
+        "y": -24.44341502679512,
+        "w": 611.085375669878,
+        "h": 94.71823322883108
+      },
+      "dial": {
+        "x": -305.542687834939,
+        "y": -198.60274709271036,
+        "w": 611.085375669878,
+        "h": 140.54963640407195
+      },
+      "bottomText": {
+        "x": -305.542687834939,
+        "y": -250.54500402464996,
+        "w": 611.085375669878,
+        "h": 42.77597629689143
+      }
+    },
+    "creation_counts": {
+      "mainFace": 1,
+      "lid": 0,
+      "register": 1,
+      "centerGear": 1,
+      "brand": 1,
+      "bottomText": 1
+    },
+    "module_count": 2
+  },
+  "finalized_configuration": {
+    "seed": "latest_pbr_annotation_20260721",
+    "presetName": "industrial_window",
+    "output": {
+      "width": 512,
+      "height": 512,
+      "transparentBackground": true
+    },
+    "shape": {
+      "faceShape": "circle",
+      "width": 1.090499851796776,
+      "height": 0.9374645457929,
+      "ovalAspectRatio": 1.3135224242508412,
+      "cornerRadius": 0.3127625291235745,
+      "bodyDepth": 123.25224981550127,
+      "facePlateDepth": 9.709906789008528,
+      "bezelDepth": 58.64882696047425,
+      "outerRimHeight": 5.4782764576375484,
+      "innerRimHeight": 5.579169088974595,
+      "outerRimThickness": 0.1269455927796662,
+      "innerRimThickness": 0.058819282441399987,
+      "edgeBevelSize": 2.660441181738861,
+      "edgeBevelSegments": 3,
+      "outerRange": [
+        405,
+        442
+      ],
+      "rimRange": [
+        46,
+        64
+      ]
+    },
+    "facePlate": {
+      "color": 12172993,
+      "roughness": 0.62,
+      "metalness": 0.1,
+      "raisedCenter": false,
+      "raisedCenterHeight": 2.5,
+      "recessedDigitWindow": true,
+      "digitWindowRecessDepth": 3.5,
+      "key": "silver",
+      "selectionSource": "seeded",
+      "dark": false,
+      "primaryLabelColor": "#111820",
+      "secondaryLabelColor": "#145faf"
+    },
+    "housing": {
+      "materialType": "agedMetal",
+      "color": 9139538,
+      "roughness": 0.46,
+      "metalness": 0.52,
+      "thicknessScale": 1.128100884729065,
+      "addOuterProtrusions": true,
+      "protrusionCount": 5,
+      "protrusionDepth": 10.970681980717927,
+      "protrusionWidth": 58.21626707352698
+    },
+    "trim": {
+      "style": "dark",
+      "primaryTrimColor": 1513755,
+      "secondaryTrimColor": 6186859,
+      "useGoldTrim": false,
+      "goldColor": 13015868,
+      "digitWindowBorderColor": 1513755,
+      "dialBorderColor": 1513755,
+      "innerOutlineColor": 1513755
+    },
+    "glass": {
+      "enabled": true,
+      "curvature": 16.50316527998075,
+      "offsetZ": 96,
+      "thickness": 8,
+      "roughness": 0.03673249737359584,
+      "transmission": 1,
+      "ior": 1.5,
+      "clearcoat": 1,
+      "clearcoatRoughness": 0.02,
+      "opacity": 1,
+      "specularIntensity": 1,
+      "envMapIntensity": 1,
+      "tint": 16777215,
+      "useSubtleReflectionOverlay": true,
+      "reflectionOpacity": 0.17659830552525818,
+      "reflectionAngle": 0.37739753724541514,
+      "reflectionScaleX": 210,
+      "reflectionScaleY": 22,
+      "reflectionOffsetX": 112.4283405719325,
+      "reflectionOffsetY": 73.06232029688545
+    },
+    "digitRegister": {
+      "minDigits": 7,
+      "maxDigits": 8,
+      "exactDigits": null,
+      "selectedDigitCount": 8,
+      "digitCountSource": "seeded_weighted_70_30",
+      "redDigitCount": 3
+    },
+    "family": "industrial_window",
+    "layoutPreset": "industrial_a",
+    "registerLayout": {
+      "anchor": [
+        0,
+        0.32
+      ],
+      "alternateAnchors": [
+        [
+          0,
+          0.36
+        ],
+        [
+          0,
+          0.24
+        ]
+      ],
+      "widthScale": 1.0914019034057856,
+      "heightScale": 0.9554311549477279,
+      "anchorJitter": 0.018,
+      "redDigitCount": 3
+    },
+    "dialLayout": {
+      "anchors": [
+        [
+          0,
+          -0.36
+        ]
+      ],
+      "radiusRange": [
+        42,
+        56
+      ],
+      "count": 1
+    },
+    "cover": {
+      "type": "window_lip",
+      "side": "up"
+    },
+    "modules": {
+      "type": "industrial_plate",
+      "side": -1,
+      "count": 1
+    },
+    "connectors": {
+      "radiusRange": [
+        34,
+        45
+      ],
+      "yRange": [
+        -8,
+        16
+      ],
+      "length": 1080
+    },
+    "screws": {
+      "countRange": [
+        2,
+        5
+      ]
+    },
+    "trimStructure": {
+      "ringCountRange": [
+        1,
+        2
+      ]
+    },
+    "appearance": {
+      "addDust": false,
+      "dustAmount": 0,
+      "addWaterStains": false,
+      "waterStainAmount": 0,
+      "addMildOxidation": false,
+      "oxidationAmount": 0
+    },
+    "lighting": {
+      "keyLightIntensity": 1.54,
+      "fillLightIntensity": 0.6,
+      "rimLightIntensity": 0.39,
+      "keyLightPosition": [
+        -300,
+        320,
+        650
+      ],
+      "fillLightPosition": [
+        270,
+        -190,
+        430
+      ],
+      "rimLightPosition": [
+        0,
+        380,
+        -260
+      ],
+      "environmentIntensity": 1,
+      "exposure": 0.9678248168155551,
+      "mode": "reduced",
+      "withEnvironment": "current"
+    },
+    "pbr": {
+      "mode": "random",
+      "requestedTextureKey": null,
+      "selectedTextureKey": "Metal021",
+      "loaded": true,
+      "familyPool": [
+        "Metal021",
+        "Metal034",
+        "Metal048A",
+        "Metal050C",
+        "Metal053C",
+        "Metal062C"
+      ]
+    }
+  },
+  "wheel_reading": "15881584",
+  "wheel": {
+    "obb": [
+      255.7917,
+      208.5293,
+      19.8279,
+      178.2749,
+      -1.5052
+    ],
+    "corners": [
+      [
+        166.5197,
+        210.9735
+      ],
+      [
+        343.7751,
+        224.245
+      ],
+      [
+        345.3873,
+        204.4803
+      ],
+      [
+        167.4959,
+        192.793
+      ]
+    ],
+    "bbox": [
+      166.5197,
+      192.793,
+      178.8676,
+      31.452
+    ],
+    "visible": true
+  },
+  "digits": [
+    {
+      "pos": 0,
+      "value": 1,
+      "gt_float": 1,
+      "is_decimal": false,
+      "obb": [
+        177.0527,
+        202.6324,
+        17.4394,
+        19.4945,
+        -1.505
+      ],
+      "corners": [
+        [
+          166.9729,
+          210.5391
+        ],
+        [
+          186.2051,
+          211.9745
+        ],
+        [
+          187.1939,
+          194.5625
+        ],
+        [
+          167.9003,
+          193.2903
+        ]
+      ],
+      "bbox": [
+        166.9729,
+        193.2903,
+        20.221,
+        18.6842
+      ],
+      "visible": true
+    },
+    {
+      "pos": 1,
+      "value": 5,
+      "gt_float": 5,
+      "is_decimal": false,
+      "obb": [
+        197.9174,
+        204.0996,
+        17.622,
+        19.8443,
+        -1.505
+      ],
+      "corners": [
+        [
+          187.6032,
+          212.0788
+        ],
+        [
+          207.2384,
+          213.5443
+        ],
+        [
+          208.2953,
+          195.9538
+        ],
+        [
+          188.5965,
+          194.6549
+        ]
+      ],
+      "bbox": [
+        187.6032,
+        194.6549,
+        20.6921,
+        18.8894
+      ],
+      "visible": true
+    },
+    {
+      "pos": 2,
+      "value": 8,
+      "gt_float": 8,
+      "is_decimal": false,
+      "obb": [
+        219.2222,
+        205.5978,
+        17.8085,
+        20.2047,
+        -1.505
+      ],
+      "corners": [
+        [
+          208.666,
+          213.6509
+        ],
+        [
+          228.7168,
+          215.1474
+        ],
+        [
+          229.8447,
+          197.3747
+        ],
+        [
+          209.7276,
+          196.0482
+        ]
+      ],
+      "bbox": [
+        208.666,
+        196.0482,
+        21.1787,
+        19.0992
+      ],
+      "visible": true
+    },
+    {
+      "pos": 3,
+      "value": 8,
+      "gt_float": 8,
+      "is_decimal": false,
+      "obb": [
+        240.9898,
+        207.1285,
+        17.9989,
+        20.5934,
+        -1.505
+      ],
+      "corners": [
+        [
+          230.1748,
+          215.2562
+        ],
+        [
+          250.6547,
+          216.7848
+        ],
+        [
+          251.8563,
+          198.826
+        ],
+        [
+          231.3075,
+          197.4711
+        ]
+      ],
+      "bbox": [
+        230.1748,
+        197.4711,
+        21.6815,
+        19.3137
+      ],
+      "visible": true
+    },
+    {
+      "pos": 4,
+      "value": 1,
+      "gt_float": 1.781982,
+      "is_decimal": false,
+      "obb": [
+        263.2121,
+        208.6441,
+        18.1937,
+        21.0399,
+        -1.5005
+      ],
+      "corners": [
+        [
+          252.144,
+          216.896
+        ],
+        [
+          273.0669,
+          218.4576
+        ],
+        [
+          274.3452,
+          200.3088
+        ],
+        [
+          253.3506,
+          198.9245
+        ]
+      ],
+      "bbox": [
+        252.144,
+        198.9245,
+        22.2012,
+        19.5331
+      ],
+      "visible": true
+    },
+    {
+      "pos": 5,
+      "value": 5,
+      "gt_float": 5,
+      "is_decimal": true,
+      "obb": [
+        285.927,
+        210.2018,
+        18.393,
+        21.5008,
+        -1.4969
+      ],
+      "corners": [
+        [
+          274.5886,
+          218.5711
+        ],
+        [
+          295.9691,
+          220.1669
+        ],
+        [
+          297.3271,
+          201.8242
+        ],
+        [
+          275.8721,
+          200.4095
+        ]
+      ],
+      "bbox": [
+        274.5886,
+        200.4095,
+        22.7385,
+        19.7574
+      ],
+      "visible": true
+    },
+    {
+      "pos": 6,
+      "value": 8,
+      "gt_float": 8.830286,
+      "is_decimal": true,
+      "obb": [
+        309.168,
+        211.8278,
+        18.5968,
+        21.9775,
+        -1.4963
+      ],
+      "corners": [
+        [
+          297.5242,
+          220.283
+        ],
+        [
+          319.3773,
+          221.914
+        ],
+        [
+          320.8184,
+          203.3731
+        ],
+        [
+          298.8877,
+          201.9271
+        ]
+      ],
+      "bbox": [
+        297.5242,
+        201.9271,
+        23.2942,
+        19.9869
+      ],
+      "visible": true
+    },
+    {
+      "pos": 7,
+      "value": 4,
+      "gt_float": 4.620979,
+      "is_decimal": true,
+      "obb": [
+        332.9016,
+        213.4947,
+        18.8052,
+        22.5319,
+        -1.4963
+      ],
+      "corners": [
+        [
+          320.9671,
+          222.0327
+        ],
+        [
+          343.3087,
+          223.7002
+        ],
+        [
+          344.8361,
+          204.9567
+        ],
+        [
+          322.4138,
+          203.4783
+        ]
+      ],
+      "bbox": [
+        320.9671,
+        203.4783,
+        23.869,
+        20.2219
+      ],
+      "visible": true
+    }
+  ]
+}

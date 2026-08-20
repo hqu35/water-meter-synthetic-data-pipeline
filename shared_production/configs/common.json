@@ -1,0 +1,13 @@
+{
+  "image_width": 512,
+  "image_height": 512,
+  "transparent_cg_background": true,
+  "texture_mode": "random",
+  "environment_mode": "random",
+  "cg_relative_input_directory": "cg_meters",
+  "mask_semantics": {
+    "white": "editable background region",
+    "black": "protected meter/object region",
+    "alpha": 255
+  }
+}

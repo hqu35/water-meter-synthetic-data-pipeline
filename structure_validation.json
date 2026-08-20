@@ -1,0 +1,11 @@
+{
+  "required_directories": 9,
+  "flux_cli_help": 737,
+  "qwen_cli_help": 737,
+  "shared_mask_pngs": [
+    "batch15_0000_mask.png",
+    "sample_0001_mask.png"
+  ],
+  "annotation_visualization_exists": true,
+  "annotation_report_exists": true
+}

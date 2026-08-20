@@ -1,0 +1,35 @@
+{
+  "source_is_new_latest_pipeline_render": true,
+  "source_image": "/Users/ququ/Documents/Codex/2026-07-06/three-js-water-meter-ai-layout/massive_production_version_2/validation/sample_results/latest_pbr_annotation_validation/latest_pbr.png",
+  "source_metadata": "/Users/ququ/Documents/Codex/2026-07-06/three-js-water-meter-ai-layout/massive_production_version_2/validation/sample_results/latest_pbr_annotation_validation/latest_pbr_metadata.json",
+  "coco_obb": "/Users/ququ/Documents/Codex/2026-07-06/three-js-water-meter-ai-layout/massive_production_version_2/validation/sample_results/latest_pbr_annotation_validation/latest_pbr_coco_obb.json",
+  "seed": "latest_pbr_annotation_20260721",
+  "family": "industrial_window",
+  "image_size": [
+    512,
+    512
+  ],
+  "texture_mode": "random",
+  "texture_set": "Metal021",
+  "texture_loaded": true,
+  "environment_key": "industrial_pipe_valve",
+  "environment_loaded": true,
+  "wheel_count": 1,
+  "digit_count": 8,
+  "annotation_count": 9,
+  "wheel_reading": "15881584",
+  "max_corner_reconstruction_error_px": 1.63781756184206,
+  "corner_reconstruction_errors_px": {
+    "wheel": 1.63781756184206,
+    "digit_0": 0.26785024360617987,
+    "digit_1": 0.2306607689303053,
+    "digit_2": 0.20038285222409452,
+    "digit_3": 0.182584081443218,
+    "digit_4": 0.10576617544492661,
+    "digit_5": 0.17326821167836637,
+    "digit_6": 0.1902967007053631,
+    "digit_7": 0.20412340769937465
+  },
+  "full_meter_bbox_available": false,
+  "note": "Current exporter metadata contains the digit register (wheel) OBB and per-digit OBBs. It does not contain a full-meter object OBB, so none was invented."
+}
