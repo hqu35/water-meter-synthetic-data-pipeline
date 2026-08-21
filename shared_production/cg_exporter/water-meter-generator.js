@@ -2,6 +2,7 @@ import * as THREE from "./vendor/three.module.js";
 import { RoomEnvironment } from "./vendor/RoomEnvironment.js";
 import { EXRLoader } from "./vendor/EXRLoader.js";
 import { normalizeExtrudeGeometryUVs } from "./extrude-uv.js";
+import { choice, hashString, mulberry32, rand, randInt, setRng, shuffle } from "./renderer/random.js";
 
 const params = new URLSearchParams(window.location.search);
 const WIDTH = Number(params.get("w") || 512);
@@ -67,6 +68,7 @@ const textureLoader = new THREE.TextureLoader();
 const texturePromiseCache = new Map();
 const environmentPromiseCache = new Map();
 const rng = mulberry32(seedParam ? hashString(seedParam) : Date.now() ^ Math.floor(Math.random() * 1e9));
+setRng(rng);
 const meterConfig = createMeterConfig(seedParam || "random", presetParam);
 if (transparentParam !== null) meterConfig.output.transparentBackground = transparentParam !== "0";
 applyDigitCountParams(meterConfig);
@@ -2792,43 +2794,4 @@ function padRect(r, pad) {
 
 function centeredToRect(b) {
   return { x: b.x - b.w / 2, y: b.y - b.h / 2, w: b.w, h: b.h };
-}
-
-function rand(min, max) {
-  return min + rng() * (max - min);
-}
-
-function randInt(min, max) {
-  return Math.floor(rand(min, max + 1));
-}
-
-function choice(arr) {
-  return arr[randInt(0, arr.length - 1)];
-}
-
-function shuffle(arr) {
-  const copy = [...arr];
-  for (let i = copy.length - 1; i > 0; i--) {
-    const j = randInt(0, i);
-    [copy[i], copy[j]] = [copy[j], copy[i]];
-  }
-  return copy;
-}
-
-function hashString(str) {
-  let h = 2166136261;
-  for (let i = 0; i < str.length; i++) {
-    h ^= str.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  return h >>> 0;
-}
-
-function mulberry32(a) {
-  return function next() {
-    let t = (a += 0x6d2b79f5);
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
 }
