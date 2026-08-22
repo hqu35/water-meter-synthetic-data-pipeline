@@ -23,6 +23,7 @@ import {
   padRect,
   validateFinalLayout,
 } from "./renderer/validation.js";
+import { buildAnnotationMeta } from "./renderer/annotations.js";
 
 const params = new URLSearchParams(window.location.search);
 const WIDTH = Number(params.get("w") || 512);
@@ -1034,7 +1035,12 @@ layoutState.validation = validateFinalLayout({
 });
 
 renderer.render(scene, camera);
-const annotationMeta = buildAnnotationMeta();
+const annotationMeta = buildAnnotationMeta({
+  camera,
+  width: WIDTH,
+  height: HEIGHT,
+  annotationState,
+});
 const maskMaterial = new THREE.MeshBasicMaterial({
   color: 0x000000,
   transparent: false,
@@ -2391,135 +2397,6 @@ function texturePlane(texture, width, height, x, y, z) {
   const plane = new THREE.Mesh(new THREE.PlaneGeometry(width, height), material);
   plane.position.set(x, y, z);
   return plane;
-}
-
-function buildAnnotationMeta() {
-  if (!annotationState.wheel) {
-    return { wheel_reading: "", wheel: null, digits: [] };
-  }
-  camera.updateProjectionMatrix();
-  camera.updateMatrixWorld(true);
-  const wheelCorners = rectToProjectedCorners(annotationState.wheel);
-  return {
-    wheel_reading: annotationState.wheelReading,
-    wheel: {
-      obb: rectToProjectedObb(annotationState.wheel),
-      corners: wheelCorners,
-      bbox: cornersToAabb(wheelCorners),
-      visible: cornersVisible(wheelCorners),
-    },
-    digits: annotationState.digits.map((digit) => {
-      const corners = rectToProjectedCorners(digit);
-      return {
-        pos: digit.pos,
-        value: digit.value,
-        gt_float: digit.gt_float,
-        is_decimal: digit.is_decimal,
-        obb: rectToProjectedObb(digit),
-        corners,
-        bbox: cornersToAabb(corners),
-        visible: cornersVisible(corners),
-      };
-    }),
-  };
-}
-
-function rectToProjectedCorners(rect) {
-  const z = rect.z || 0;
-  return [
-    new THREE.Vector3(rect.cx - rect.w / 2, rect.cy - rect.h / 2, z),
-    new THREE.Vector3(rect.cx + rect.w / 2, rect.cy - rect.h / 2, z),
-    new THREE.Vector3(rect.cx + rect.w / 2, rect.cy + rect.h / 2, z),
-    new THREE.Vector3(rect.cx - rect.w / 2, rect.cy + rect.h / 2, z),
-  ].map((point) => {
-    const pixel = projectToPixel(point);
-    return [Number(pixel.x.toFixed(4)), Number(pixel.y.toFixed(4))];
-  });
-}
-
-function cornersToAabb(corners) {
-  const xs = corners.map(([x]) => x);
-  const ys = corners.map(([, y]) => y);
-  const minX = Math.min(...xs);
-  const minY = Math.min(...ys);
-  return [
-    Number(minX.toFixed(4)),
-    Number(minY.toFixed(4)),
-    Number((Math.max(...xs) - minX).toFixed(4)),
-    Number((Math.max(...ys) - minY).toFixed(4)),
-  ];
-}
-
-function cornersVisible(corners) {
-  return corners.every(([x, y]) => x >= 0 && x <= WIDTH && y >= 0 && y <= HEIGHT);
-}
-
-function rectToProjectedObb(rect) {
-  const z = rect.z || 0;
-  const corners = [
-    new THREE.Vector3(rect.cx - rect.w / 2, rect.cy - rect.h / 2, z),
-    new THREE.Vector3(rect.cx + rect.w / 2, rect.cy - rect.h / 2, z),
-    new THREE.Vector3(rect.cx + rect.w / 2, rect.cy + rect.h / 2, z),
-    new THREE.Vector3(rect.cx - rect.w / 2, rect.cy + rect.h / 2, z),
-  ].map((point) => projectToPixel(point));
-  return minAreaRectObb(corners).map((value) => Number(value.toFixed(4)));
-}
-
-function projectToPixel(point) {
-  const projected = point.clone().project(camera);
-  return {
-    x: (projected.x * 0.5 + 0.5) * WIDTH,
-    y: (-projected.y * 0.5 + 0.5) * HEIGHT,
-  };
-}
-
-function minAreaRectObb(points) {
-  let best = null;
-  for (let i = 0; i < points.length; i++) {
-    const a = points[i];
-    const b = points[(i + 1) % points.length];
-    const angle = Math.atan2(b.y - a.y, b.x - a.x);
-    const cos = Math.cos(angle);
-    const sin = Math.sin(angle);
-    const rotated = points.map((p) => ({
-      x: p.x * cos + p.y * sin,
-      y: -p.x * sin + p.y * cos,
-    }));
-    const minX = Math.min(...rotated.map((p) => p.x));
-    const maxX = Math.max(...rotated.map((p) => p.x));
-    const minY = Math.min(...rotated.map((p) => p.y));
-    const maxY = Math.max(...rotated.map((p) => p.y));
-    const w = maxX - minX;
-    const h = maxY - minY;
-    const area = w * h;
-    if (!best || area < best.area) {
-      const rcx = (minX + maxX) / 2;
-      const rcy = (minY + maxY) / 2;
-      best = {
-        area,
-        cx: rcx * cos - rcy * sin,
-        cy: rcx * sin + rcy * cos,
-        w,
-        h,
-        angle,
-      };
-    }
-  }
-  return normalizeCv2Obb(best.cx, best.cy, best.w, best.h, best.angle);
-}
-
-function normalizeCv2Obb(cx, cy, w, h, angle) {
-  while (angle <= -Math.PI / 2) angle += Math.PI;
-  while (angle > Math.PI / 2) angle -= Math.PI;
-  if (angle > 0) {
-    angle -= Math.PI / 2;
-    [w, h] = [h, w];
-  }
-  if (angle <= -Math.PI / 2) {
-    angle += Math.PI / 2;
-    [w, h] = [h, w];
-  }
-  return [cx, cy, w, h, angle];
 }
 
 function mat(color, roughness = 0.55, metalness = 0.25, opacity = 1) {
