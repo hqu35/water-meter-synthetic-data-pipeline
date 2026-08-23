@@ -1,5 +1,6 @@
 import * as THREE from "../vendor/three.module.js";
 import { choice, hashString, mulberry32, rand, randInt } from "./random.js";
+import { HDRI_MANIFEST } from "./lighting.js";
 
 export const DESIGN_FAMILIES = [
   "classic_round",
@@ -24,12 +25,6 @@ export const FAMILY_TEXTURE_POOLS = Object.freeze({
   modular_industrial: ["Metal021", "Metal048A", "Metal050C", "Metal053C", "Metal062C"],
   smart_housing: ["Metal034", "Metal048A", "Metal062C"],
 });
-export const HDRI_MANIFEST = Object.freeze({
-  aircraft_workshop: "../HDRI/aircraft_workshop_01_1k.exr",
-  empty_warehouse: "../HDRI/empty_warehouse_01_1k.exr",
-  industrial_pipe_valve: "../HDRI/industrial_pipe_and_valve_01_1k (1).exr",
-});
-
 export function createMeterConfig({ seed, presetName, familyParam, width, height, rng }) {
   const base = {
     seed,
