@@ -1,6 +1,7 @@
 import * as THREE from "../vendor/three.module.js";
 import { choice, hashString, mulberry32, rand, randInt } from "./random.js";
 import { HDRI_MANIFEST } from "./lighting.js";
+import { FAMILY_TEXTURE_POOLS, PBR_TEXTURE_MANIFEST } from "./materials.js";
 
 export const DESIGN_FAMILIES = [
   "classic_round",
@@ -9,22 +10,6 @@ export const DESIGN_FAMILIES = [
   "modular_industrial",
   "smart_housing",
 ];
-export const PBR_TEXTURE_MANIFEST = Object.freeze(Object.fromEntries(
-  ["Metal021", "Metal034", "Metal048A", "Metal050C", "Metal053C", "Metal062C"].map((key) => [key, {
-    color: `../assets/textures/pbr/${key}/${key}_1K-PNG_Color.png`,
-    roughness: `../assets/textures/pbr/${key}/${key}_1K-PNG_Roughness.png`,
-    metalness: `../assets/textures/pbr/${key}/${key}_1K-PNG_Metalness.png`,
-    normal: `../assets/textures/pbr/${key}/${key}_1K-PNG_NormalGL.png`,
-  }])
-));
-
-export const FAMILY_TEXTURE_POOLS = Object.freeze({
-  classic_round: ["Metal021", "Metal034", "Metal048A"],
-  industrial_window: ["Metal021", "Metal034", "Metal048A", "Metal050C", "Metal053C", "Metal062C"],
-  protective_shell: ["Metal034", "Metal050C"],
-  modular_industrial: ["Metal021", "Metal048A", "Metal050C", "Metal053C", "Metal062C"],
-  smart_housing: ["Metal034", "Metal048A", "Metal062C"],
-});
 export function createMeterConfig({ seed, presetName, familyParam, width, height, rng }) {
   const base = {
     seed,
