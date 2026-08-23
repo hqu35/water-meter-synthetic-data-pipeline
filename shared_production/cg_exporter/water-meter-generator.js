@@ -23,6 +23,7 @@ import {
 } from "./renderer/validation.js";
 import { buildAnnotationMeta } from "./renderer/annotations.js";
 import { addLights, addStudioBackdrop, createSceneEnvironment } from "./renderer/lighting.js";
+import { buildOutputMetadata, installOutputAPI, renderFinalRgb } from "./renderer/output.js";
 import {
   FAMILY_TEXTURE_POOLS,
   createHousingMaterial,
@@ -239,154 +240,39 @@ layoutState.validation = validateFinalLayout({
   digitWindow,
 });
 
-renderer.render(scene, camera);
+renderFinalRgb({ renderer, scene, camera });
 const annotationMeta = buildAnnotationMeta({
   camera,
   width: WIDTH,
   height: HEIGHT,
   annotationState,
 });
-const maskMaterial = new THREE.MeshBasicMaterial({
-  color: 0x000000,
-  transparent: false,
-  opacity: 1,
-  toneMapped: false,
-  vertexColors: false,
-  side: THREE.DoubleSide,
-  depthTest: true,
-  depthWrite: true,
+installOutputAPI({
+  scene,
+  camera,
+  renderer,
+  root,
+  createMetadata: () => buildOutputMetadata({
+    seedParam,
+    config: meterConfig,
+    width: WIDTH,
+    height: HEIGHT,
+    occupied,
+    registerGlyphDiagnostics,
+    layoutState,
+    resolvePbrRepeat,
+    normalizePbrExtrudeUVs,
+    pbrUvNormalizationStats,
+    environmentState,
+    materials,
+    annotationMeta,
+  }),
+  registerGlyphDiagnostic: registerGlyphDiagnosticParam,
+  createRegisterGlyphDiagnosticCanvas,
+  exportMode,
+  width: WIDTH,
+  height: HEIGHT,
 });
-let maskRenderState = null;
-
-function renderWaterMeterMask() {
-  if (maskRenderState) return;
-
-  const hiddenObjects = [];
-  root.traverse((object) => {
-    if (object.userData.excludeFromMask && object.visible) {
-      hiddenObjects.push(object);
-      object.visible = false;
-    }
-  });
-
-  maskRenderState = {
-    background: scene.background,
-    environment: scene.environment,
-    environmentIntensity: scene.environmentIntensity,
-    environmentRotation: scene.environmentRotation.clone(),
-    fog: scene.fog,
-    overrideMaterial: scene.overrideMaterial,
-    clearColor: renderer.getClearColor(new THREE.Color()).clone(),
-    clearAlpha: renderer.getClearAlpha(),
-    toneMapping: renderer.toneMapping,
-    toneMappingExposure: renderer.toneMappingExposure,
-    shadowMapEnabled: renderer.shadowMap.enabled,
-    hiddenObjects,
-  };
-
-  scene.background = new THREE.Color(0xffffff);
-  scene.environment = null;
-  scene.environmentIntensity = 0;
-  scene.environmentRotation.set(0, 0, 0);
-  scene.fog = null;
-  scene.overrideMaterial = maskMaterial;
-  renderer.setClearColor(0xffffff, 1);
-  renderer.toneMapping = THREE.NoToneMapping;
-  renderer.toneMappingExposure = 1;
-  renderer.shadowMap.enabled = false;
-  renderer.render(scene, camera);
-  window.__waterMeterMaskReady = true;
-}
-
-function restoreWaterMeterRender() {
-  if (!maskRenderState) return;
-  const state = maskRenderState;
-  maskRenderState = null;
-
-  scene.background = state.background;
-  scene.environment = state.environment;
-  scene.environmentIntensity = state.environmentIntensity;
-  scene.environmentRotation.copy(state.environmentRotation);
-  scene.fog = state.fog;
-  scene.overrideMaterial = state.overrideMaterial;
-  renderer.setClearColor(state.clearColor, state.clearAlpha);
-  renderer.toneMapping = state.toneMapping;
-  renderer.toneMappingExposure = state.toneMappingExposure;
-  renderer.shadowMap.enabled = state.shadowMapEnabled;
-  state.hiddenObjects.forEach((object) => {
-    object.visible = true;
-  });
-  renderer.render(scene, camera);
-  window.__waterMeterMaskReady = false;
-}
-
-if (registerGlyphDiagnosticParam) {
-  const diagnosticCanvas = createRegisterGlyphDiagnosticCanvas();
-  renderer.domElement.replaceWith(diagnosticCanvas);
-  window.__registerGlyphDiagnosticCanvas = diagnosticCanvas;
-}
-
-window.__waterMeterReady = true;
-window.__waterMeterMaskReady = false;
-window.__renderWaterMeterMask = renderWaterMeterMask;
-window.__restoreWaterMeterRender = restoreWaterMeterRender;
-window.__waterMeterMeta = {
-  seed: seedParam || "random",
-  preset: meterConfig.presetName,
-  family: meterConfig.family,
-  layout_preset: meterConfig.layoutPreset,
-  size: [WIDTH, HEIGHT],
-  mode: "three-js-3d-front-view",
-  occupied: occupied.length,
-  digit_count: meterConfig.digitRegister.selectedDigitCount,
-  digit_count_source: meterConfig.digitRegister.digitCountSource,
-  red_digit_count: meterConfig.digitRegister.redDigitCount,
-  register_glyph_diagnostics: registerGlyphDiagnostics,
-  dial_count: layoutState.dials.length,
-  texture_mode: meterConfig.pbr.mode,
-  texture_set: meterConfig.pbr.selectedTextureKey,
-  texture_loaded: meterConfig.pbr.loaded,
-  pbr_repeat: {
-    metalHousing: resolvePbrRepeat("metalHousing"),
-    metalBezel: resolvePbrRepeat("metalBezel"),
-    metalConnector: resolvePbrRepeat("metalConnector"),
-    metalMechanical: resolvePbrRepeat("metalMechanical"),
-  },
-  pbr_extrude_uv_normalized: normalizePbrExtrudeUVs,
-  pbr_extrude_uv_stats: pbrUvNormalizationStats,
-  face_plate: {
-    key: meterConfig.facePlate.key,
-    color: meterConfig.facePlate.color,
-    dark: meterConfig.facePlate.dark,
-    selection_source: meterConfig.facePlate.selectionSource,
-  },
-  lighting_mode: meterConfig.lighting.mode,
-  environmentMode: environmentState.mode,
-  requestedEnvironmentKey: environmentState.requestedKey,
-  selectedEnvironmentKey: environmentState.selectedKey,
-  environmentLoaded: environmentState.loaded,
-  environmentFallback: environmentState.fallback,
-  environmentIntensity: environmentState.intensity,
-  environmentRotation: environmentState.rotationDegrees,
-  lightingWithEnvironment: meterConfig.lighting.withEnvironment,
-  textured_roles: ["metalHousing", "metalBezel", "metalConnector", "metalMechanical"]
-    .filter((role) => Boolean(materials[role])),
-  textured_components: materials.metalDetail ? ["center_gear", "screws"] : [],
-  metal_detail_texture: materials.metalDetail ? meterConfig.pbr.selectedTextureKey : null,
-  layout_validation: layoutState.validation,
-  finalized_configuration: JSON.parse(JSON.stringify(meterConfig)),
-  ...annotationMeta,
-};
-
-if (!exportMode) {
-  window.addEventListener("click", () => {
-    const next = new URLSearchParams(window.location.search);
-    next.set("seed", String(Date.now()));
-    next.set("w", String(WIDTH));
-    next.set("h", String(HEIGHT));
-    window.location.search = `?${next.toString()}`;
-  });
-}
 
 function makeShell() {
   const faceShape = meterConfig.shape.faceShape;
