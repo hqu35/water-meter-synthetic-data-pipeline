@@ -43,7 +43,7 @@ function randInt(min, max) {
 function choice(arr) {
   return arr[randInt(0, arr.length - 1)];
 }
-D
+
 /**
  * Returns a shuffled copy of an array using the Fisher-Yates algorithm.
  * The input array is not modified.
@@ -74,7 +74,7 @@ function hashString(str) {
     h ^= str.charCodeAt(i);
     h = Math.imul(h, 16777619);
   }
-  // cnovert to unsigned 32 bit
+  // Convert to an unsigned 32-bit integer.
   return h >>> 0;
 }
 
@@ -93,7 +93,7 @@ function mulberry32(a) {
    */
   return function next() {
     let t = (a += 0x6d2b79f5);
-    // avalanch mixing step
+    // Avalanche mixing step.
     t = Math.imul(t ^ (t >>> 15), t | 1);
     t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
     // output [0,1)
