@@ -10,10 +10,9 @@ export const DESIGN_FAMILIES = [
   "modular_industrial",
   "smart_housing",
 ];
-export function createMeterConfig({ seed, presetName, familyParam, width, height, rng }) {
+export function createMeterConfig({ seed, family, width, height, rng }) {
   const base = {
     seed,
-    presetName,
     output: { width, height, transparentBackground: true },
     shape: {
       faceShape: "roundedSquare",
@@ -130,67 +129,13 @@ export function createMeterConfig({ seed, presetName, familyParam, width, height
     },
   };
 
-  const presets = {
-    classic_white: {
-      shape: { faceShape: "roundedSquare", cornerRadius: 0.34, bodyDepth: 86, bezelDepth: 38, outerRimHeight: 8 },
-      housing: { materialType: "paintedMetal", color: 0xe6e2d8, roughness: 0.44, metalness: 0.48, thicknessScale: 1 },
-      trim: { style: "black", primaryTrimColor: 0x111111, secondaryTrimColor: 0x496f91, digitWindowBorderColor: 0x111111 },
-      glass: { curvature: 13, roughness: 0.04, reflectionOpacity: 0.14 },
-    },
-    industrial_brass: {
-      shape: { faceShape: "roundedSquare", bodyDepth: 104, bezelDepth: 48, outerRimHeight: 12, outerRimThickness: 0.16 },
-      housing: { materialType: "brass", color: 0x9a6d2f, roughness: 0.34, metalness: 0.84, thicknessScale: 1.18 },
-      trim: { style: "bronze", primaryTrimColor: 0x2a2118, secondaryTrimColor: 0x8b6b38 },
-      facePlate: { color: 0xf0eadb, roughness: 0.55 },
-    },
-    oval_modern: {
-      shape: { faceShape: "oval", ovalAspectRatio: 1.22, bodyDepth: 76, bezelDepth: 30, outerRimHeight: 6, outerRimThickness: 0.08 },
-      housing: { materialType: "paintedMetal", color: 0xd9dee0, roughness: 0.38, metalness: 0.45, addOuterProtrusions: false },
-      trim: { style: "steel", primaryTrimColor: 0x8f979b, secondaryTrimColor: 0x5f7484, digitWindowBorderColor: 0x20272c },
-      glass: { curvature: 11, roughness: 0.035, tint: 0xf4fbff, reflectionOpacity: 0.13 },
-    },
-    black_gold: {
-      shape: { faceShape: rng() > 0.45 ? "roundedSquare" : "oval", ovalAspectRatio: 1.18, bodyDepth: 90, bezelDepth: 40 },
-      housing: { materialType: "darkMetal", color: 0x26282b, roughness: 0.38, metalness: 0.75 },
-      facePlate: { color: 0x262723, roughness: 0.46, metalness: 0.12 },
-      trim: { style: "gold", useGoldTrim: true, primaryTrimColor: 0xc69b3c, secondaryTrimColor: 0xc69b3c, digitWindowBorderColor: 0xc69b3c },
-      glass: { curvature: 14, tint: 0xf7f1e8, reflectionOpacity: 0.18 },
-    },
-    heavy_duty: {
-      shape: { faceShape: "circle", bodyDepth: 118, bezelDepth: 56, outerRimHeight: 14, innerRimHeight: 9, outerRimThickness: 0.18 },
-      housing: { materialType: "agedMetal", color: 0x756957, roughness: 0.64, metalness: 0.66, thicknessScale: 1.3, addOuterProtrusions: true, protrusionCount: 6 },
-      trim: { style: "dark", primaryTrimColor: 0x17191b, secondaryTrimColor: 0x5e676b },
-      glass: { curvature: 18, thickness: 9, roughness: 0.055, reflectionOpacity: 0.18 },
-    },
-    minimal_flat: {
-      shape: { faceShape: "roundedSquare", bodyDepth: 64, bezelDepth: 24, outerRimHeight: 4, innerRimHeight: 3, outerRimThickness: 0.06 },
-      housing: { materialType: "plastic", color: 0xdedfdc, roughness: 0.48, metalness: 0, thicknessScale: 0.78, addOuterProtrusions: false },
-      trim: { style: "gray", primaryTrimColor: 0x2f3438, secondaryTrimColor: 0x9aa2a6 },
-      glass: { curvature: 8, roughness: 0.04, reflectionOpacity: 0.11 },
-    },
-  };
-
-  const legacyFamilyMap = {
-    classic_white: "classic_round",
-    industrial_brass: "industrial_window",
-    oval_modern: "smart_housing",
-    black_gold: "modular_industrial",
-    heavy_duty: "industrial_window",
-    minimal_flat: "smart_housing",
-  };
-  const requestedFamily = DESIGN_FAMILIES.includes(familyParam)
-    ? familyParam
-    : DESIGN_FAMILIES.includes(presetName)
-      ? presetName
-      : null;
-  const selectedFamily = requestedFamily || legacyFamilyMap[presetName] || choice(DESIGN_FAMILIES);
-  const selectedName = presets[presetName] ? presetName : null;
+  const selectedFamily = DESIGN_FAMILIES.includes(family)
+    ? family
+    : choice(DESIGN_FAMILIES);
   const randomized = randomizeMeterConfig(rng);
   deepMerge(base, randomized);
   deepMerge(base, createFamilyProfile(selectedFamily, seed, rng));
-  if (presets[selectedName]) deepMerge(base, presets[selectedName]);
   base.family = selectedFamily;
-  base.presetName = selectedName || selectedFamily;
   applyTrimStyle(base.trim);
   return base;
 }
@@ -427,24 +372,13 @@ export function applyFacePlateVariation(config, seed, overrideKey) {
   });
 }
 
-export function applyLightingMode(config, seed, mode) {
-  if (mode === "old") {
-    Object.assign(config.lighting, {
-      keyLightIntensity: 2.2,
-      fillLightIntensity: 0.85,
-      rimLightIntensity: 0.55,
-      exposure: 1.05,
-      mode: "old",
-    });
-    return;
-  }
+export function applyLightingConfiguration(config, seed) {
   const lightingRng = mulberry32(hashString(`${seed}|lighting-reduced`));
   Object.assign(config.lighting, {
     keyLightIntensity: 1.54,
     fillLightIntensity: 0.6,
     rimLightIntensity: 0.39,
     exposure: 0.92 + lightingRng() * 0.06,
-    mode: "reduced",
   });
 }
 
@@ -457,7 +391,7 @@ export function applyLightingWithEnvironment(config, requestedMode) {
   config.lighting.withEnvironment = mode;
 }
 
-export function selectEnvironment(seed, family, preset, requestedMode, requestedKey, intensityValue, rotationValue) {
+export function selectEnvironment(seed, family, requestedMode, requestedKey, intensityValue, rotationValue) {
   const mode = ["room", "single", "random"].includes(requestedMode) ? requestedMode : "room";
   const keys = Object.keys(HDRI_MANIFEST);
   let selectedKey = null;
@@ -468,7 +402,7 @@ export function selectEnvironment(seed, family, preset, requestedMode, requested
       console.warn(`[water-meter] Invalid environment key "${requestedKey || ""}"; falling back to RoomEnvironment.`);
     }
   } else if (mode === "random") {
-    const environmentRng = mulberry32(hashString(`${seed}|${family}|${preset}|environment`));
+    const environmentRng = mulberry32(hashString(`${seed}|${family}|environment`));
     selectedKey = keys[Math.floor(environmentRng() * keys.length)];
   }
 

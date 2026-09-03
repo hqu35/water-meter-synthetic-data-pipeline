@@ -9,7 +9,6 @@ const projectRoot = path.resolve(root, "..");
 const width = Number(process.env.WIDTH || 512);
 const height = Number(process.env.HEIGHT || 512);
 const seed = process.env.SEED || "meter_0000";
-const preset = process.env.PRESET || "";
 const family = process.env.FAMILY || "";
 const textureMode = process.env.TEXTURE_MODE || "random";
 const textureKey = process.env.TEXTURE_KEY || "";
@@ -21,7 +20,6 @@ const pbrRoughness = process.env.PBR_ROUGHNESS || "";
 const pbrMetalness = process.env.PBR_METALNESS || "";
 const pbrNormalScale = process.env.PBR_NORMAL_SCALE || "";
 const normalizePbrExtrudeUVs = process.env.NORMALIZE_PBR_EXTRUDE_UVS || "";
-const lightingMode = process.env.LIGHTING_MODE || "";
 const environmentMode = process.env.ENVIRONMENT_MODE || "random";
 const environmentKey = process.env.ENVIRONMENT_KEY || "";
 const environmentIntensity = process.env.ENVIRONMENT_INTENSITY || "";
@@ -427,7 +425,6 @@ async function runConnectedBrowser(target) {
 server.listen(port, "127.0.0.1", async () => {
   try {
     const targetParams = new URLSearchParams({ export: "1", w: String(width), h: String(height), seed });
-    if (preset) targetParams.set("preset", preset);
     if (family) targetParams.set("family", family);
     if (textureMode) targetParams.set("textureMode", textureMode);
     if (textureKey) targetParams.set("textureKey", textureKey);
@@ -439,7 +436,6 @@ server.listen(port, "127.0.0.1", async () => {
     if (pbrMetalness) targetParams.set("pbrMetalness", pbrMetalness);
     if (pbrNormalScale) targetParams.set("pbrNormalScale", pbrNormalScale);
     if (normalizePbrExtrudeUVs) targetParams.set("normalizePbrExtrudeUVs", normalizePbrExtrudeUVs);
-    if (lightingMode) targetParams.set("lightingMode", lightingMode);
     if (environmentMode) targetParams.set("environmentMode", environmentMode);
     if (environmentKey) targetParams.set("environmentKey", environmentKey);
     if (environmentIntensity) targetParams.set("environmentIntensity", environmentIntensity);

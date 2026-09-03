@@ -34,7 +34,7 @@ import {
 import {
   applyDigitCountParams,
   applyFacePlateVariation,
-  applyLightingMode,
+  applyLightingConfiguration,
   applyLightingWithEnvironment,
   createMeterConfig,
   selectDigitCount,
@@ -47,8 +47,7 @@ const WIDTH = Number(params.get("w") || 512);
 const HEIGHT = Number(params.get("h") || 512);
 const seedParam = params.get("seed");
 const exportMode = params.get("export") === "1";
-const presetParam = params.get("preset") || "random";
-const familyParam = params.get("family");
+const family = params.get("family");
 const transparentParam = params.get("transparent");
 const exactDigitsParam = params.get("digits");
 const digitMinParam = params.get("digitMin");
@@ -65,7 +64,6 @@ const pbrMetalnessParam = params.get("pbrMetalness");
 const pbrNormalScaleParam = params.get("pbrNormalScale");
 const normalizePbrExtrudeUVsParam = params.get("normalizePbrExtrudeUVs");
 const normalizePbrExtrudeUVs = normalizePbrExtrudeUVsParam !== "0";
-const lightingModeParam = params.get("lightingMode") || "reduced";
 const environmentModeParam = params.get("environmentMode") || "random";
 const environmentKeyParam = params.get("environmentKey");
 const environmentIntensityParam = params.get("environmentIntensity");
@@ -75,8 +73,7 @@ const rng = mulberry32(seedParam ? hashString(seedParam) : Date.now() ^ Math.flo
 setRng(rng);
 const meterConfig = createMeterConfig({
   seed: seedParam || "random",
-  presetName: presetParam,
-  familyParam,
+  family,
   width: WIDTH,
   height: HEIGHT,
   rng,
@@ -84,7 +81,7 @@ const meterConfig = createMeterConfig({
 if (transparentParam !== null) meterConfig.output.transparentBackground = transparentParam !== "0";
 applyDigitCountParams(meterConfig, { exactDigitsParam, digitMinParam, digitMaxParam });
 applyFacePlateVariation(meterConfig, seedParam || "random", faceColorParam);
-applyLightingMode(meterConfig, seedParam || "random", lightingModeParam);
+applyLightingConfiguration(meterConfig, seedParam || "random");
 applyLightingWithEnvironment(meterConfig, lightingWithEnvironmentParam);
 const pbrSelection = selectPbrTexture(seedParam || "random", meterConfig.family, textureModeParam, textureKeyParam);
 const loadedPbrTextureSet = pbrSelection.textureKey ? await loadPbrTextureSet(pbrSelection.textureKey) : null;
@@ -98,7 +95,6 @@ meterConfig.pbr = {
 const environmentSelection = selectEnvironment(
   seedParam || "random",
   meterConfig.family,
-  meterConfig.presetName,
   environmentModeParam,
   environmentKeyParam,
   environmentIntensityParam,

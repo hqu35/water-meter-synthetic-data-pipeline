@@ -21,7 +21,6 @@ export function buildOutputMetadata({
 }) {
   return {
     seed: seedParam || "random",
-    preset: config.presetName,
     family: config.family,
     layout_preset: config.layoutPreset,
     size: [width, height],
@@ -49,7 +48,6 @@ export function buildOutputMetadata({
       dark: config.facePlate.dark,
       selection_source: config.facePlate.selectionSource,
     },
-    lighting_mode: config.lighting.mode,
     environmentMode: environmentState.mode,
     requestedEnvironmentKey: environmentState.requestedKey,
     selectedEnvironmentKey: environmentState.selectedKey,
