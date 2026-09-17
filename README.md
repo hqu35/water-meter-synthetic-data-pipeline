@@ -1,7 +1,44 @@
-# Water Meter Massive Production V2
+# Water-Meter perception system
 
-This directory is a clean production copy. The original working directories
-remain unchanged.
+A synthetic-data and perception pipeline for mechanical water-meter reading.
+
+The project addresses a practical data problem: collecting and labeling large-scale real-world water-meter images is expensive, while difficult cases such as partially rolling digits, varying meter designs, lighting changes, and background clutter are underrepresented in small real datasets.
+
+This system uses procedural 3D rendering to generate controllable water-meter scenes together with exact annotations, then optionally applies generative refinement to improve visual realism while preserving the underlying meter state.
+
+The synthetic-data pipeline has already shown measurable downstream value: on our evaluation setup, augmenting training with generated data improved detector performance from **78.7% mAP@0.85 to 85.7% mAP@0.85**.
+
+![CG-Grounded Qwen Inpainting Workflow](posters/qwen_mask_workflow_collage_poster_v3.png)
+
+![Flux Image Augmentation Workflow](posters/flux_workflow_collage_poster_v3.png)
+
+## Core Idea
+Workflow1:
+
+Procedural Meter Configuration
+        ↓
+Three.js CG Rendering
+        ↓
+Exact Meter State + Masks + Annotations
+        ↓
+Qwen Background Inpainting
+        ↓
+Realistic Composite
+        ↓
+Synthetic Training Dataset
+
+workflow2: 
+
+Procedural Meter Configuration
+        ↓
+Three.js CG Rendering
+        ↓
+Flux Image-to-Image Augmentation
+        ↓
+Global Appearance Variation
+        ↓
+Synthetic Training Dataset
+
 
 ## Workers
 
