@@ -1,8 +1,15 @@
 {
   "scripts": {
-    "test": "node --test tests/*.test.js"
+    "test": "node --test tests/*.test.js",
+    "test:graphics": "vitest run",
+    "test:graphics:watch": "vitest",
+    "test:graphics:unit": "vitest run --exclude tests/vitest/99-fuzz.test.js",
+    "test:graphics:fuzz": "vitest run tests/vitest/99-fuzz.test.js"
   },
   "dependencies": {
     "playwright": "^1.61.1"
+  },
+  "devDependencies": {
+    "vitest": "^5.0.1"
   }
 }
