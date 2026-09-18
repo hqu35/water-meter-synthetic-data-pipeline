@@ -23,6 +23,11 @@ __pycache__/
 
 # Optional generated / validation outputs
 validation/sample_results/.DS_Store
+outputs/
+test-results/
+playwright-report/
+coverage/
+*.trace.zip
 __pycache__/
 *.pyc
 *.log

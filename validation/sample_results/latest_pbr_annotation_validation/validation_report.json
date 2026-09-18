@@ -1,8 +1,8 @@
 {
   "source_is_new_latest_pipeline_render": true,
-  "source_image": "/Users/ququ/Documents/Codex/2026-07-06/three-js-water-meter-ai-layout/massive_production_version_2/validation/sample_results/latest_pbr_annotation_validation/latest_pbr.png",
-  "source_metadata": "/Users/ququ/Documents/Codex/2026-07-06/three-js-water-meter-ai-layout/massive_production_version_2/validation/sample_results/latest_pbr_annotation_validation/latest_pbr_metadata.json",
-  "coco_obb": "/Users/ququ/Documents/Codex/2026-07-06/three-js-water-meter-ai-layout/massive_production_version_2/validation/sample_results/latest_pbr_annotation_validation/latest_pbr_coco_obb.json",
+  "source_image": "validation/sample_results/latest_pbr_annotation_validation/latest_pbr.png",
+  "source_metadata": "validation/sample_results/latest_pbr_annotation_validation/latest_pbr_metadata.json",
+  "coco_obb": "validation/sample_results/latest_pbr_annotation_validation/latest_pbr_coco_obb.json",
   "seed": "latest_pbr_annotation_20260721",
   "family": "industrial_window",
   "image_size": [

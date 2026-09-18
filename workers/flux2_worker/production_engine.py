@@ -24,7 +24,7 @@ from flux2_prompt_generator import generate_prompt
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent
-CG_EXPORTER_ROOT = PROJECT_ROOT.parents[1] / "shared_production" / "cg_exporter"
+CG_EXPORTER_ROOT = PROJECT_ROOT.parents[1] / "synthetic_core" / "cg_exporter"
 LOCAL_WORKFLOW = PROJECT_ROOT / "workflow/image_flux2_api.json"
 DEFAULT_WORKFLOW = LOCAL_WORKFLOW
 DEFAULT_COMFY_URL = "http://127.0.0.1:8188"

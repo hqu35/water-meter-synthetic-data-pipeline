@@ -6,6 +6,8 @@ const { chromium } = require("playwright");
 
 const root = __dirname;
 const projectRoot = path.resolve(root, "..");
+const repoRoot = path.resolve(root, "../..");
+const outputRoot = path.resolve(process.env.OUTPUT_DIR || path.join(repoRoot, "outputs"));
 const width = Number(process.env.WIDTH || 512);
 const height = Number(process.env.HEIGHT || 512);
 const seed = process.env.SEED || "meter_0000";
@@ -28,17 +30,19 @@ const lightingWithEnvironment = process.env.LIGHTING_WITH_ENVIRONMENT || "";
 const transparent = process.env.TRANSPARENT || "";
 const digits = process.env.DIGITS || "";
 const preserveAlpha = transparent !== "0";
-const imageOutput = path.resolve(process.env.IMAGE_OUTPUT || path.join(__dirname, "../output/images/meter_0000.png"));
+const keepBrowserOpen = process.env.KEEP_BROWSER_OPEN === "1";
+const imageOutput = path.resolve(process.env.IMAGE_OUTPUT || path.join(outputRoot, "images/meter_0000.png"));
 const imagePathParts = path.parse(imageOutput);
 const maskOutput = path.resolve(process.env.MASK_OUTPUT || path.join(imagePathParts.dir, `${imagePathParts.name}_mask.png`));
-const metadataOutput = path.resolve(process.env.METADATA_OUTPUT || path.join(__dirname, "../output/metadata/meter_0000.json"));
+const metadataOutput = path.resolve(process.env.METADATA_OUTPUT || path.join(outputRoot, "metadata/meter_0000.json"));
 const port = Number(process.env.PORT || 5601);
 const cdpEndpoint = process.env.CDP_ENDPOINT || "http://127.0.0.1:9222";
-const debugDir = path.resolve(process.env.DEBUG_DIR || path.join(__dirname, "../output/debug"));
-const fullPageDebug = path.join(debugDir, "full_page_debug.png");
-const canvasElementDebug = path.join(debugDir, "canvas_element_debug.png");
-const validatedBufferDebug = path.join(debugDir, "validated_buffer_debug.png");
-const maskDebug = path.join(debugDir, "validated_mask_debug.png");
+const debugDir = path.resolve(process.env.DEBUG_DIR || path.join(outputRoot, "debug"));
+const debugStem = imagePathParts.name;
+const fullPageDebug = path.join(debugDir, `${debugStem}_full_page.png`);
+const canvasElementDebug = path.join(debugDir, `${debugStem}_canvas.png`);
+const validatedBufferDebug = path.join(debugDir, `${debugStem}_validated_rgb.png`);
+const maskDebug = path.join(debugDir, `${debugStem}_validated_mask.png`);
 
 fs.mkdirSync(path.dirname(imageOutput), { recursive: true });
 fs.mkdirSync(path.dirname(maskOutput), { recursive: true });
@@ -285,7 +289,15 @@ async function preparePage(context, target, logs) {
     throw error;
   }
   try {
-    await page.waitForFunction(() => window.__waterMeterReady === true, null, { timeout: 45000 });
+    await page.waitForFunction(
+      () => window.__waterMeterState?.status === "ready" || window.__waterMeterState?.status === "error",
+      null,
+      { timeout: 45000 }
+    );
+    const rendererState = await page.evaluate(() => window.__waterMeterState);
+    if (rendererState.status === "error") {
+      throw new Error(`Renderer initialization failed: ${rendererState.error}`);
+    }
   } catch (error) {
     console.error(`[export-cg-single] page did not become ready; browser logs=${JSON.stringify(logs)}`);
     throw error;
@@ -386,10 +398,15 @@ async function exportBinaryMask(page, canvas, normalStats) {
 async function runConnectedBrowser(target) {
   let browser;
   let page;
+  let preserveForInspection = false;
   const logs = [];
   try {
     console.log(`[export-cg-single] connecting CDP ${cdpEndpoint}`);
-    browser = await chromium.connectOverCDP(cdpEndpoint);
+    try {
+      browser = await chromium.connectOverCDP(cdpEndpoint);
+    } catch (error) {
+      throw new Error(`Could not connect to Chrome at ${cdpEndpoint}. Start Chrome with remote debugging enabled or set CDP_ENDPOINT. Cause: ${error.message}`);
+    }
     const contexts = browser.contexts();
     if (contexts.length === 0) {
       throw new Error(`External Chrome at ${cdpEndpoint} has no browser context`);
@@ -408,7 +425,20 @@ async function runConnectedBrowser(target) {
         const savedStats = await attempt();
         const maskStats = await exportBinaryMask(page, canvas, savedStats);
         const meta = await page.evaluate(() => window.__waterMeterMeta);
-        return { profile: "external-chrome-cdp", canvasInfo, savedStats, maskStats, meta, logs, errors };
+        preserveForInspection = keepBrowserOpen;
+        return {
+          profile: "external-chrome-cdp",
+          canvasInfo,
+          savedStats,
+          maskStats,
+          meta,
+          logs,
+          errors,
+          close: async () => {
+            if (page) await page.close().catch(() => {});
+            if (browser) await browser.close().catch(() => {});
+          },
+        };
       } catch (error) {
         const message = error && error.stack ? error.stack : String(error);
         errors.push(message);
@@ -417,12 +447,20 @@ async function runConnectedBrowser(target) {
     }
     throw new Error(`All CDP screenshot methods failed:\n${errors.join("\n\n")}`);
   } finally {
-    if (page) await page.close().catch(() => {});
-    if (browser) await browser.close().catch(() => {});
+    if (!preserveForInspection) {
+      if (page) await page.close().catch(() => {});
+      if (browser) await browser.close().catch(() => {});
+    }
   }
 }
 
+server.on("error", (error) => {
+  console.error(`[export-cg-single] static server failed on 127.0.0.1:${port}: ${error.stack || error}`);
+  process.exitCode = 1;
+});
+
 server.listen(port, "127.0.0.1", async () => {
+  let result;
   try {
     const targetParams = new URLSearchParams({ export: "1", w: String(width), h: String(height), seed });
     if (family) targetParams.set("family", family);
@@ -445,7 +483,7 @@ server.listen(port, "127.0.0.1", async () => {
     if (digits) targetParams.set("digits", digits);
     const target = `http://127.0.0.1:${port}/?${targetParams.toString()}`;
 
-    const result = await runConnectedBrowser(target);
+    result = await runConnectedBrowser(target);
 
     fs.writeFileSync(metadataOutput, `${JSON.stringify(result.meta, null, 2)}\n`);
     console.log(JSON.stringify({
@@ -463,7 +501,18 @@ server.listen(port, "127.0.0.1", async () => {
       attemptErrors: result.errors,
       logs: result.logs,
     }, null, 2));
+    if (keepBrowserOpen) {
+      console.log("[export-cg-single] KEEP_BROWSER_OPEN=1: renderer tab will remain open for inspection. Press Ctrl-C to close it.");
+      await new Promise((resolve) => {
+        process.once("SIGINT", resolve);
+        process.once("SIGTERM", resolve);
+      });
+    }
+  } catch (error) {
+    console.error(`[export-cg-single] export failed: ${error.stack || error}`);
+    process.exitCode = 1;
   } finally {
+    if (result?.close) await result.close();
     server.close();
   }
 });
