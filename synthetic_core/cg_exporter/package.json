@@ -1,5 +1,6 @@
 {
   "scripts": {
+    "export:single": "node export-cg-single.js",
     "test": "node --test tests/*.test.js",
     "test:graphics": "vitest run",
     "test:graphics:watch": "vitest",

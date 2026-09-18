@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import os
 import random
 from pathlib import Path
 from typing import Any
@@ -10,11 +11,11 @@ from typing import Any
 from PIL import Image, ImageDraw, ImageFont
 
 
-WORKSPACE_ROOT = Path(__file__).resolve().parents[3]
-V2_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_COCO = WORKSPACE_ROOT / "output/coco_obb.json"
-DEFAULT_IMAGE_ROOT = WORKSPACE_ROOT / "output"
-DEFAULT_OUT = V2_ROOT / "validation/sample_results"
+REPO_ROOT = Path(__file__).resolve().parents[2]
+DEFAULT_OUTPUT_ROOT = Path(os.environ.get("OUTPUT_DIR", REPO_ROOT / "outputs")).expanduser().resolve()
+DEFAULT_COCO = DEFAULT_OUTPUT_ROOT / "annotations/coco_obb.json"
+DEFAULT_IMAGE_ROOT = DEFAULT_OUTPUT_ROOT
+DEFAULT_OUT = DEFAULT_OUTPUT_ROOT / "validation"
 
 
 def read_json(path: Path) -> dict[str, Any]:
@@ -26,9 +27,9 @@ def resolve_image(file_name: str, image_root: Path, coco_path: Path) -> Path | N
     candidates = [
         image_root / relative,
         coco_path.parent / relative,
-        WORKSPACE_ROOT / relative,
-        WORKSPACE_ROOT / "output/images" / relative.name,
-        WORKSPACE_ROOT / "output/cg" / relative.name,
+        REPO_ROOT / relative,
+        DEFAULT_OUTPUT_ROOT / "images" / relative.name,
+        DEFAULT_OUTPUT_ROOT / "cg" / relative.name,
     ]
     for candidate in candidates:
         if candidate.is_file():
@@ -52,12 +53,11 @@ def obb_points(obb: list[float]) -> list[tuple[float, float]]:
 
 
 def load_font(size: int = 14) -> ImageFont.ImageFont:
-    for candidate in [
-        "/System/Library/Fonts/Supplemental/Arial.ttf",
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-    ]:
-        if Path(candidate).exists():
+    for candidate in ["Arial.ttf", "DejaVuSans.ttf"]:
+        try:
             return ImageFont.truetype(candidate, size)
+        except OSError:
+            continue
     return ImageFont.load_default()
 
 

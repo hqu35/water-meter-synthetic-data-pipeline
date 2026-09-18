@@ -1,8 +1,8 @@
 {
   "image_id": 20,
   "file_name": "images/meter_0019.png",
-  "source_image": "/Users/ququ/Documents/Codex/2026-07-06/three-js-water-meter-ai-layout/output/images/meter_0019.png",
-  "visualization": "/Users/ququ/Documents/Codex/2026-07-06/three-js-water-meter-ai-layout/massive_production_version_2/validation/sample_results/meter_0019_annotation_check.png",
+  "source_image": "outputs/images/meter_0019.png",
+  "visualization": "validation/sample_results/meter_0019_annotation_check.png",
   "annotation_count": 5,
   "category_counts": {
     "wheel": 1,
@@ -12,7 +12,7 @@
     512,
     512
   ],
-  "coco_path": "/Users/ququ/Documents/Codex/2026-07-06/three-js-water-meter-ai-layout/output/coco_obb.json",
+  "coco_path": "outputs/annotations/coco_obb.json",
   "selection_seed": 20260721,
   "available_image_count": 20,
   "categories_in_coco": {

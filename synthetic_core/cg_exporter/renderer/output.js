@@ -159,6 +159,7 @@ export function installOutputAPI({
   }
 
   window.__waterMeterReady = true;
+  window.__waterMeterState = { status: "ready", error: null };
   window.__waterMeterMaskReady = false;
   window.__renderWaterMeterMask = renderWaterMeterMask;
   window.__restoreWaterMeterRender = restoreWaterMeterRender;

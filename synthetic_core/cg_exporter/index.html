@@ -3,6 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
     <title>Mechanical Water Meter Layout Generator</title>
     <style>
       html,
@@ -19,6 +20,16 @@
     </style>
   </head>
   <body>
+    <script>
+      window.__waterMeterState = { status: "loading", error: null };
+      function reportRendererError(value) {
+        const error = value instanceof Error ? (value.stack || value.message) : String(value);
+        window.__waterMeterState = { status: "error", error };
+        console.error(`[water-meter] renderer error: ${error}`);
+      }
+      window.addEventListener("error", (event) => reportRendererError(event.error || event.message));
+      window.addEventListener("unhandledrejection", (event) => reportRendererError(event.reason));
+    </script>
     <script type="module" src="./water-meter-generator.js"></script>
   </body>
 </html>

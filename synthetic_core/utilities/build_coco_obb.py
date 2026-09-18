@@ -102,7 +102,7 @@ def image_file_names_for_stem(stem: str, image_root: Path, diffusion_lookup: Dic
     diffusion_paths = diffusion_lookup.get(stem, [])
     if diffusion_paths:
         return [relative_image_name(path, image_root) for path in diffusion_paths]
-    return [f"cg/{stem}.png"]
+    return [f"images/{stem}.png"]
 
 
 def wheel_reading(metadata: dict) -> str:
