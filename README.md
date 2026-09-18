@@ -70,10 +70,10 @@ The optional `launch_comfyui.sh` scripts launch separate ComfyUI servers when
 
 ## Shared Production
 
-`shared_production/cg_exporter` is a copy of the current working Three.js
+`synthetic_core/cg_exporter` is a copy of the current working Three.js
 renderer and exporter. Both workers use it through a relative `work` symlink.
 PBR assets, HDRIs, existing masks, common configuration, and utilities are
-stored once under `shared_production`.
+stored once under `synthetic_core`.
 
 ## Annotation Check
 
