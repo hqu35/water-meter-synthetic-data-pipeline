@@ -8,18 +8,12 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-from production_engine import DEFAULT_WORKFLOW, ProductionConfig, ProductionRunner, ProductionStatus
+from production_engine import DEFAULT_BATCH_ID, DEFAULT_COMFY_URL, DEFAULT_OUTPUT_ROOT, DEFAULT_WORKFLOW, ProductionConfig, ProductionRunner, ProductionStatus
 
 
-HOST = os.environ.get("WORKER_HOST", "127.0.0.1")
-PORT = int(os.environ.get("WORKER_PORT", "9001"))
+HOST = os.environ.get("QWEN_DASHBOARD_HOST", os.environ.get("DASHBOARD_HOST", os.environ.get("WORKER_HOST", "127.0.0.1")))
+PORT = int(os.environ.get("QWEN_DASHBOARD_PORT", os.environ.get("DASHBOARD_PORT", os.environ.get("WORKER_PORT", "9001"))))
 PROJECT_ROOT = Path(__file__).resolve().parent
-DEFAULT_COMFY_URL = os.environ.get("COMFY_URL", "http://127.0.0.1:8191")
-DEFAULT_COMFY_INPUT_DIR = os.environ.get("COMFY_INPUT_DIR", "/home/ryanqu/ComfyUI/input")
-DEFAULT_OUTPUT_ROOT = os.environ.get(
-    "OUTPUT_ROOT",
-    "/home/ryanqu/massive_production_version_2/qwen_inpainting_dataset",
-)
 
 
 class JobManager:
@@ -43,8 +37,8 @@ class JobManager:
                 height=int(payload.get("height", 512)),
                 workflow=Path(payload.get("workflow") or DEFAULT_WORKFLOW),
                 comfy_url=str(payload.get("comfy_url") or DEFAULT_COMFY_URL),
-                comfy_input_dir=Path(payload.get("comfy_input_dir") or DEFAULT_COMFY_INPUT_DIR),
                 output_root=Path(payload.get("output_root") or DEFAULT_OUTPUT_ROOT),
+                batch_id=str(payload.get("batch_id") or DEFAULT_BATCH_ID),
                 overwrite=bool(payload.get("overwrite", False)),
                 start_index=int(payload.get("start_index", 0)),
             )
@@ -123,9 +117,9 @@ HTML = f"""<!doctype html>
     <label>Width<input id="width" type="number" value="512"></label>
     <label>Height<input id="height" type="number" value="512"></label>
     <label>ComfyUI URL<input id="comfy_url" value="{DEFAULT_COMFY_URL}"></label>
-    <label>ComfyUI input directory<input id="comfy_input_dir" value="{DEFAULT_COMFY_INPUT_DIR}"></label>
     <label>Workflow API JSON path<input id="workflow" value="{DEFAULT_WORKFLOW}"></label>
     <label>Output dataset folder<input id="output_root" value="{DEFAULT_OUTPUT_ROOT}"></label>
+    <label>Batch ID<input id="batch_id" value="{DEFAULT_BATCH_ID}"></label>
     <label>Resume start_index<input id="start_index" type="number" value="0"></label>
     <label>Overwrite existing dataset<input id="overwrite" type="checkbox"></label>
   </div>
@@ -200,9 +194,9 @@ function formPayload() {{
     width: Number(document.getElementById('width').value),
     height: Number(document.getElementById('height').value),
     comfy_url: document.getElementById('comfy_url').value,
-    comfy_input_dir: document.getElementById('comfy_input_dir').value,
     workflow: document.getElementById('workflow').value,
     output_root: document.getElementById('output_root').value,
+    batch_id: document.getElementById('batch_id').value,
     start_index: Number(document.getElementById('start_index').value),
     overwrite: document.getElementById('overwrite').checked
   }};
