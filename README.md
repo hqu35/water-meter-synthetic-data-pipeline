@@ -61,19 +61,18 @@ CLI arguments are still supported when arguments are supplied.
 
 - Flux2 dashboard: `http://127.0.0.1:9000`
 - Qwen dashboard: `http://127.0.0.1:9001`
-- Flux2 GPU assignment: CUDA device 2
-- Qwen GPU assignment: CUDA device 3
 
-Each worker expects a ComfyUI instance using the matching workflow and GPU.
-The optional `launch_comfyui.sh` scripts launch separate ComfyUI servers when
-`COMFYUI_ROOT` is set.
+Both workers default to one ComfyUI instance at `http://127.0.0.1:8188`.
+Route-specific endpoints and separate servers remain optional. GPU assignment
+belongs to the deployment environment, not repository code. See
+[`workers/README.md`](workers/README.md) for the output contract, variables,
+model filenames, custom node class types, and CLI commands.
 
 ## Shared Production
 
-`synthetic_core/cg_exporter` is a copy of the current working Three.js
-renderer and exporter. Both workers use it through a relative `work` symlink.
-PBR assets, HDRIs, existing masks, common configuration, and utilities are
-stored once under `synthetic_core`.
+`synthetic_core/cg_exporter` is the shared Three.js renderer and exporter used
+directly by both workers. PBR assets, HDRIs, existing masks, common
+configuration, and utilities are stored once under `synthetic_core`.
 
 ## Annotation Check
 

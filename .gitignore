@@ -14,6 +14,15 @@ __pycache__/
 # Local env / secrets
 .env
 .env.*
+!.env.example
+
+# ComfyUI installations and model weights are deployment-local
+ComfyUI/
+models/
+*.safetensors
+*.ckpt
+*.pth
+*.pt
 
 # Heavy / source asset formats not needed at runtime
 *.blend
@@ -28,7 +37,3 @@ test-results/
 playwright-report/
 coverage/
 *.trace.zip
-__pycache__/
-*.pyc
-*.log
-.env

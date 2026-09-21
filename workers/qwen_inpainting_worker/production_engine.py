@@ -11,6 +11,7 @@ import subprocess
 import sys
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 import uuid
 import zlib
@@ -24,9 +25,17 @@ from qwen_background_prompt_generator import generate_prompt
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent
+REPO_ROOT = PROJECT_ROOT.parents[1]
 CG_EXPORTER_ROOT = PROJECT_ROOT.parents[1] / "synthetic_core" / "cg_exporter"
 LOCAL_WORKFLOW = PROJECT_ROOT / "workflow/qwen_inpainting_api.json"
 DEFAULT_WORKFLOW = LOCAL_WORKFLOW
+DEFAULT_COMFY_URL = (
+    os.environ.get("QWEN_COMFYUI_URL")
+    or os.environ.get("COMFYUI_URL")
+    or "http://127.0.0.1:8188"
+)
+DEFAULT_OUTPUT_ROOT = Path(os.environ.get("OUTPUT_ROOT", REPO_ROOT / "outputs")).expanduser().resolve()
+DEFAULT_BATCH_ID = os.environ.get("BATCH_ID", "demo_001")
 CG_TIME_SECONDS = 3
 DIFFUSION_TIME_SECONDS = 30
 
@@ -49,7 +58,9 @@ def read_json(path: Path) -> Any:
 
 def write_json(path: Path, data: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    temporary = path.with_name(f".{path.name}.{uuid.uuid4().hex}.tmp")
+    temporary.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    temporary.replace(path)
 
 
 def http_json(url: str, data: Optional[dict] = None, timeout: int = 20) -> Any:
@@ -59,8 +70,12 @@ def http_json(url: str, data: Optional[dict] = None, timeout: int = 20) -> Any:
         body = json.dumps(data).encode("utf-8")
         headers["Content-Type"] = "application/json"
     req = urllib.request.Request(url, data=body, headers=headers)
-    with urllib.request.urlopen(req, timeout=timeout) as response:
-        raw = response.read().decode("utf-8")
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as response:
+            raw = response.read().decode("utf-8")
+    except urllib.error.HTTPError as exc:
+        raw = exc.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"HTTP {exc.code} from {url}: {raw or exc.reason}") from exc
     return json.loads(raw) if raw else {}
 
 
@@ -72,47 +87,133 @@ def check_comfy_reachable(comfy_url: str) -> None:
         raise RuntimeError(f"ComfyUI is not reachable at {comfy_url}: {exc}") from exc
 
 
+def validate_comfy_workflow_dependencies(comfy_url: str, workflow: dict) -> None:
+    try:
+        object_info = http_json(f"{comfy_url.rstrip('/')}/object_info", timeout=30)
+    except Exception as exc:
+        raise RuntimeError(f"Could not read ComfyUI node/model inventory from /object_info: {exc}") from exc
+    class_types = sorted({str(node.get("class_type")) for node in workflow.values() if isinstance(node, dict)})
+    missing_nodes = [class_type for class_type in class_types if class_type not in object_info]
+    missing_models: List[str] = []
+    model_inputs = {"ckpt_name", "unet_name", "clip_name", "vae_name", "lora_name", "control_net_name"}
+    for node in workflow.values():
+        if not isinstance(node, dict):
+            continue
+        class_type = str(node.get("class_type", ""))
+        node_info = object_info.get(class_type, {})
+        input_info = node_info.get("input", {}) if isinstance(node_info, dict) else {}
+        declared = {}
+        if isinstance(input_info, dict):
+            declared.update(input_info.get("required", {}) or {})
+            declared.update(input_info.get("optional", {}) or {})
+        for name, value in (node.get("inputs", {}) or {}).items():
+            if name not in model_inputs or not isinstance(value, str):
+                continue
+            spec = declared.get(name)
+            available = spec[0] if isinstance(spec, list) and spec and isinstance(spec[0], list) else None
+            if available is not None and value not in available:
+                missing_models.append(value)
+    if missing_nodes or missing_models:
+        parts = []
+        if missing_nodes:
+            parts.append(f"missing ComfyUI node class types: {', '.join(missing_nodes)}")
+        if missing_models:
+            parts.append(f"missing model files: {', '.join(sorted(set(missing_models)))}")
+        raise RuntimeError("ComfyUI workflow preflight failed: " + "; ".join(parts))
+
+
 def find_node_env() -> tuple[str, Dict[str, str]]:
     env = os.environ.copy()
     node_bin = env.get("NODE_BIN")
     if node_bin:
         return node_bin, env
 
-    bundled = Path.home() / ".cache/codex-runtimes/codex-primary-runtime/dependencies/node"
-    bundled_node = bundled / "bin/node"
-    bundled_modules = bundled / "node_modules"
-    if bundled_node.exists():
-        if bundled_modules.exists():
-            env["NODE_PATH"] = str(bundled_modules)
-        return str(bundled_node), env
-
-    return "node", env
+    node = shutil.which("node")
+    if not node:
+        raise RuntimeError("Node.js was not found on PATH. Install Node.js or set NODE_BIN.")
+    return node, env
 
 
-def ensure_dataset_dirs(output_root: Path) -> Dict[str, Path]:
+def relative_to_batch(path: Path, batch_root: Path) -> str:
+    return path.resolve().relative_to(batch_root.resolve()).as_posix()
+
+
+def upload_comfy_image(comfy_url: str, local_path: Path, remote_subfolder: str) -> str:
+    if not local_path.is_file():
+        raise FileNotFoundError(f"Required ComfyUI input artifact is missing: {local_path}")
+    boundary = f"----water-meter-{uuid.uuid4().hex}"
+    chunks: List[bytes] = []
+
+    def add_field(name: str, value: str) -> None:
+        chunks.extend([
+            f"--{boundary}\r\n".encode(),
+            f'Content-Disposition: form-data; name="{name}"\r\n\r\n'.encode(),
+            value.encode(),
+            b"\r\n",
+        ])
+
+    add_field("type", "input")
+    add_field("overwrite", "true")
+    add_field("subfolder", remote_subfolder)
+    chunks.extend([
+        f"--{boundary}\r\n".encode(),
+        f'Content-Disposition: form-data; name="image"; filename="{local_path.name}"\r\n'.encode(),
+        b"Content-Type: image/png\r\n\r\n",
+        local_path.read_bytes(),
+        b"\r\n",
+        f"--{boundary}--\r\n".encode(),
+    ])
+    request = urllib.request.Request(
+        f"{comfy_url.rstrip('/')}/upload/image",
+        data=b"".join(chunks),
+        headers={"Content-Type": f"multipart/form-data; boundary={boundary}"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=60) as response:
+            result = json.loads(response.read().decode("utf-8"))
+    except Exception as exc:
+        raise RuntimeError(f"ComfyUI input upload failed for {local_path}: {exc}") from exc
+    name = result.get("name") or local_path.name
+    subfolder = result.get("subfolder") or remote_subfolder
+    return f"{subfolder.rstrip('/')}/{name}" if subfolder else str(name)
+
+
+def download_comfy_image(comfy_url: str, candidate: dict, destination: Path) -> None:
+    query = urllib.parse.urlencode({
+        "filename": candidate["filename"],
+        "subfolder": candidate.get("subfolder", ""),
+        "type": candidate.get("type", "output"),
+    })
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    temporary = destination.with_suffix(destination.suffix + ".part")
+    try:
+        with urllib.request.urlopen(f"{comfy_url.rstrip('/')}/view?{query}", timeout=120) as response:
+            temporary.write_bytes(response.read())
+        temporary.replace(destination)
+    except Exception as exc:
+        temporary.unlink(missing_ok=True)
+        raise RuntimeError(f"ComfyUI result download failed: {exc}") from exc
+
+
+def ensure_dataset_dirs(batch_root: Path) -> Dict[str, Path]:
     dirs = {
-        "cg": output_root / "cg",
-        "masks": output_root / "masks",
-        "metadata": output_root / "metadata",
-        "prompts": output_root / "prompts",
-        "diffusion_outputs": output_root / "diffusion_outputs",
-        "manifest": output_root / "manifest",
-        "logs": output_root / "logs",
-        "debug_workflows": output_root / "debug_workflows",
+        "cg": batch_root / "cg",
+        "ai": batch_root / "ai_augmented" / "qwen",
+        "prompts": batch_root / "auxiliary" / "qwen" / "prompts",
+        "logs": batch_root / "auxiliary" / "qwen" / "logs",
+        "debug_workflows": batch_root / "auxiliary" / "qwen" / "debug_workflows",
+        "cg_debug": batch_root / "auxiliary" / "cg_debug",
     }
     for path in dirs.values():
         path.mkdir(parents=True, exist_ok=True)
     return dirs
 
 
-def output_has_existing_data(output_root: Path) -> bool:
-    if not output_root.exists():
+def output_has_existing_data(batch_root: Path) -> bool:
+    if not batch_root.exists():
         return False
-    for sub in ["cg", "masks", "metadata", "prompts", "diffusion_outputs", "manifest", "logs", "debug_workflows"]:
-        path = output_root / sub
-        if path.exists() and any(path.iterdir()):
-            return True
-    return False
+    return any(batch_root.iterdir())
 
 
 def png_stats(path: Path) -> dict:
@@ -259,17 +360,12 @@ def generate_cg_image(
     width: int,
     height: int,
     requested_seed: str,
-    comfy_input_dir: Path,
     dataset_cg_path: Path,
     dataset_mask_path: Path,
     metadata_path: Path,
+    debug_dir: Path,
     attempt_callback: Optional[Callable[[int, str], None]] = None,
 ) -> tuple[Path, dict]:
-    comfy_cg_dir = comfy_input_dir / "cg_meters"
-    comfy_cg_dir.mkdir(parents=True, exist_ok=True)
-    comfy_image_path = comfy_cg_dir / f"meter_{index:04d}.png"
-    comfy_mask_path = comfy_cg_dir / f"meter_{index:04d}_mask.png"
-
     node, env = find_node_env()
     command = [node, str(CG_EXPORTER_ROOT / "export-cg-single.js")]
     attempt_seeds = [
@@ -292,15 +388,16 @@ def generate_cg_image(
                 "SEED": actual_seed,
                 "TEXTURE_MODE": "random",
                 "ENVIRONMENT_MODE": "random",
-                "IMAGE_OUTPUT": str(comfy_image_path),
-                "MASK_OUTPUT": str(comfy_mask_path),
+                "IMAGE_OUTPUT": str(dataset_cg_path),
+                "MASK_OUTPUT": str(dataset_mask_path),
                 "METADATA_OUTPUT": str(metadata_path),
-                "PORT": str(5601 + (index % 1000)),
+                "DEBUG_DIR": str(debug_dir),
+                "PORT": str(int(os.environ.get("CG_PORT_BASE", "6601")) + (index % 1000)),
             }
         )
         print(f"[massive_production] CG export index={index} requested_seed={requested_seed} attempt={attempt} actual_seed={actual_seed}")
         print(f"[massive_production] CG export command={' '.join(command)}")
-        print(f"[massive_production] CG final image path={comfy_image_path}")
+        print(f"[massive_production] CG final image path={dataset_cg_path}")
         print(f"[massive_production] CG final metadata path={metadata_path}")
         try:
             result = subprocess.run(
@@ -315,26 +412,19 @@ def generate_cg_image(
                 print(result.stdout.rstrip())
             if result.stderr:
                 print(result.stderr.rstrip(), file=sys.stderr)
-            comfy_stats = validate_cg_png(comfy_image_path, f"CG ComfyUI input {comfy_image_path.name}")
-            if not comfy_mask_path.exists():
-                raise RuntimeError(f"CG mask does not exist: {comfy_mask_path}")
+            dataset_stats = validate_cg_png(dataset_cg_path, f"batch CG {dataset_cg_path.name}")
+            if not dataset_mask_path.exists():
+                raise RuntimeError(f"CG mask does not exist: {dataset_mask_path}")
             if not metadata_path.exists():
                 raise RuntimeError(f"CG metadata does not exist: {metadata_path}")
-            dataset_cg_path.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(comfy_image_path, dataset_cg_path)
-            dataset_mask_path.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(comfy_mask_path, dataset_mask_path)
-            dataset_stats = validate_cg_png(dataset_cg_path, f"dataset CG {dataset_cg_path.name}")
+            read_json(metadata_path)
             print(f"[massive_production] CG export success index={index} attempt={attempt} actual_seed={actual_seed}")
-            return comfy_image_path, {
+            return dataset_cg_path, {
                 "requested_seed": requested_seed,
                 "cg_seed_used": actual_seed,
                 "cg_export_attempts": attempt,
                 "cg_export_error_log": error_log,
-                "cg_comfy_png_stats": comfy_stats,
                 "cg_dataset_png_stats": dataset_stats,
-                "cg_mask_absolute_path": str(dataset_mask_path.resolve()),
-                "cg_mask_comfy_absolute_path": str(comfy_mask_path.resolve()),
             }
         except Exception as exc:
             if isinstance(exc, subprocess.CalledProcessError):
@@ -378,9 +468,8 @@ def keep_flux_guidance_safe(workflow: dict) -> None:
                     inputs[key] = 4
 
 
-def prepare_workflow(workflow_path: Path, image_rel: str, prompt: str, seed: int, width: int, height: int, prefix: str) -> dict:
+def prepare_workflow(workflow_path: Path, image_rel: str, mask_rel: str, prompt: str, seed: int, width: int, height: int, prefix: str) -> dict:
     workflow = copy.deepcopy(read_json(workflow_path))
-    mask_rel = image_rel.replace(".png", "_mask.png")
     set_if_exists(workflow, "71", "image", image_rel)
     set_if_exists(workflow, "266", "image", mask_rel)
     set_if_exists(workflow, "6", "text", prompt)
@@ -411,7 +500,26 @@ def wait_for_comfy(comfy_url: str, prompt_id: str, cancel_event: Optional[Event]
             raise TimeoutError(f"Timed out waiting for ComfyUI prompt {prompt_id}")
         history = http_json(f"{comfy_url.rstrip('/')}/history/{prompt_id}", timeout=20)
         if prompt_id in history:
-            return history[prompt_id]
+            history_entry = history[prompt_id]
+            status = history_entry.get("status", {}) if isinstance(history_entry, dict) else {}
+            messages = status.get("messages", []) if isinstance(status, dict) else []
+            for message in messages if isinstance(messages, list) else []:
+                if not isinstance(message, list) or len(message) < 2 or message[0] != "execution_error":
+                    continue
+                payload = message[1] if isinstance(message[1], dict) else {}
+                raise RuntimeError(
+                    "ComfyUI execution failed: "
+                    f"node_id={payload.get('node_id', 'unknown')}; "
+                    f"node_type={payload.get('node_type', 'unknown')}; "
+                    f"exception_type={payload.get('exception_type', 'unknown')}; "
+                    f"exception_message={payload.get('exception_message') or payload.get('message') or 'unknown'}"
+                )
+            if isinstance(status, dict) and status.get("status_str") in {"error", "failed"}:
+                raise RuntimeError(f"ComfyUI execution failed: {json.dumps(status, ensure_ascii=False)}")
+            if isinstance(status, dict) and status.get("completed") is False:
+                time.sleep(2)
+                continue
+            return history_entry
         time.sleep(2)
 
 
@@ -433,7 +541,7 @@ def execution_cached_nodes(history_entry: dict) -> List[str]:
     return nodes
 
 
-def collect_diffusion_output_candidates(history_entry: dict, comfy_output_root: Path) -> List[dict]:
+def collect_diffusion_output_candidates(history_entry: dict) -> List[dict]:
     outputs = history_entry.get("outputs", {})
     candidates: List[dict] = []
     if isinstance(outputs, dict):
@@ -448,31 +556,23 @@ def collect_diffusion_output_candidates(history_entry: dict, comfy_output_root: 
                     continue
                 subfolder = image.get("subfolder") or ""
                 image_type = image.get("type") or "output"
-                base = comfy_output_root if image_type == "output" else comfy_output_root.parent / image_type
-                path = (base / subfolder / filename).resolve()
                 candidates.append(
                     {
                         "node_id": node_id,
                         "filename": filename,
                         "subfolder": subfolder,
                         "type": image_type,
-                        "path": path,
-                        "exists": path.exists(),
                     }
                 )
     return candidates
 
 
-def require_existing_diffusion_output(history_entry: dict, comfy_output_root: Path) -> tuple[Path, List[dict], bool, List[str]]:
+def require_existing_diffusion_output(history_entry: dict) -> tuple[dict, List[dict], bool, List[str]]:
     cached_nodes = execution_cached_nodes(history_entry)
     cached = bool(cached_nodes)
-    candidates = collect_diffusion_output_candidates(history_entry, comfy_output_root)
-    printable = [
-        {**candidate, "path": str(candidate["path"])}
-        for candidate in candidates
-    ]
+    candidates = collect_diffusion_output_candidates(history_entry)
     print(f"[massive_production] execution_cached={cached} cached_nodes={cached_nodes}")
-    print(f"[massive_production] history output candidates={json.dumps(printable, ensure_ascii=False)}")
+    print(f"[massive_production] history output candidates={json.dumps(candidates, ensure_ascii=False)}")
     if "163" in cached_nodes:
         raise RuntimeError("ComfyUI cached final SaveImage node 163; diffusion did not produce a new output.")
     if not candidates:
@@ -480,10 +580,7 @@ def require_existing_diffusion_output(history_entry: dict, comfy_output_root: Pa
     final_candidates = [candidate for candidate in candidates if str(candidate["node_id"]) == "163"]
     if not final_candidates:
         raise RuntimeError("ComfyUI history has no final Qwen output from SaveImage node 163.")
-    existing = [candidate["path"] for candidate in final_candidates if candidate["exists"]]
-    if existing:
-        return max(existing, key=lambda path: path.stat().st_mtime), candidates, cached, cached_nodes
-    raise RuntimeError("ComfyUI reported success but output file does not exist.")
+    return final_candidates[-1], candidates, cached, cached_nodes
 
 
 @dataclass
@@ -493,9 +590,9 @@ class ProductionConfig:
     width: int = 512
     height: int = 512
     workflow: Path = DEFAULT_WORKFLOW
-    comfy_url: str = "http://127.0.0.1:8190"
-    comfy_input_dir: Path = Path("")
-    output_root: Path = Path("synthetic_data_meter_V1")
+    comfy_url: str = DEFAULT_COMFY_URL
+    output_root: Path = DEFAULT_OUTPUT_ROOT
+    batch_id: str = DEFAULT_BATCH_ID
     overwrite: bool = False
     start_index: int = 0
 
@@ -548,16 +645,19 @@ class ProductionRunner:
         self.cancel_event = cancel_event or Event()
         self.status_callback = status_callback
         self.status = ProductionStatus(total_images=config.n, variations_per_cg=config.variations)
-        self.records: List[dict] = []
-        self.dirs = ensure_dataset_dirs(config.output_root)
-        self.manifest_path = self.dirs["manifest"] / "production_manifest.json"
+        if not config.batch_id or Path(config.batch_id).name != config.batch_id:
+            raise ValueError("batch_id must be one portable path segment")
+        self.batch_root = config.output_root.expanduser().resolve() / config.batch_id
+        self.dirs = ensure_dataset_dirs(self.batch_root)
+        self.manifest_path = self.batch_root / "batch_manifest.json"
+        self.samples: Dict[str, dict] = {}
         self.started_monotonic = 0.0
-
-    def comfy_output_root(self) -> Path:
-        return self.config.comfy_input_dir.parent / "output"
-
-    def output_directory_for_prefix(self, prefix: str) -> Path:
-        return self.comfy_output_root() / Path(prefix).parent
+        if self.manifest_path.exists():
+            existing_manifest = read_json(self.manifest_path)
+            existing_samples = existing_manifest.get("samples", {}) if isinstance(existing_manifest, dict) else {}
+            if not isinstance(existing_samples, dict):
+                raise ValueError(f"Existing manifest samples are invalid: {self.manifest_path}")
+            self.samples = existing_samples
 
     def update(self, **kwargs: Any) -> None:
         for key, value in kwargs.items():
@@ -576,35 +676,47 @@ class ProductionRunner:
             self.status.estimated_remaining_seconds = remaining_steps * DIFFUSION_TIME_SECONDS
             if self.status.status == "generating_cg":
                 self.status.estimated_remaining_seconds += max(0, self.config.n - self.status.current_image_index) * CG_TIME_SECONDS
-        self.status.cg_count = len(list(self.dirs["cg"].glob("*.png"))) if self.dirs["cg"].exists() else 0
-        self.status.metadata_count = len(list(self.dirs["metadata"].glob("*.json"))) if self.dirs["metadata"].exists() else 0
+        self.status.cg_count = len(list(self.dirs["cg"].glob("*/image.png"))) if self.dirs["cg"].exists() else 0
+        self.status.metadata_count = len(list(self.dirs["cg"].glob("*/metadata.json"))) if self.dirs["cg"].exists() else 0
         self.status.diffusion_count = self.status.completed_count
-        self.status.output_root = str(self.config.output_root.resolve())
-        self.status.comfy_output_directory = str(self.comfy_output_root().resolve())
+        self.status.output_root = str(self.batch_root)
+        self.status.comfy_output_directory = self.config.comfy_url
         self.status.manifest_path = str(self.manifest_path.resolve())
         if self.status_callback:
             self.status_callback(self.status)
 
     def save_manifest(self) -> None:
-        write_json(
-            self.manifest_path,
-            {
-                "created_at": self.status.started_at,
-                "updated_at": utc_now(),
-                "config": {
-                    "n": self.config.n,
-                    "variations": self.config.variations,
-                    "width": self.config.width,
-                    "height": self.config.height,
-                    "workflow": str(self.config.workflow),
-                    "comfy_url": self.config.comfy_url,
-                    "comfy_input_dir": str(self.config.comfy_input_dir),
-                    "output_root": str(self.config.output_root),
-                    "start_index": self.config.start_index,
-                },
-                "records": self.records,
-            },
-        )
+        lock_path = self.manifest_path.with_suffix(".lock")
+        deadline = time.time() + 30
+        while True:
+            try:
+                lock_path.mkdir()
+                break
+            except FileExistsError:
+                if time.time() >= deadline:
+                    raise TimeoutError(f"Timed out waiting for manifest lock: {lock_path}")
+                time.sleep(0.05)
+        try:
+            manifest = read_json(self.manifest_path) if self.manifest_path.exists() else {}
+            manifest.setdefault("batch_id", self.config.batch_id)
+            manifest.setdefault("created_at", self.status.started_at or utc_now())
+            manifest["updated_at"] = utc_now()
+            manifest.setdefault("routes", {})["qwen"] = {
+                "workflow": relative_to_batch(self.config.workflow, REPO_ROOT) if self.config.workflow.is_relative_to(REPO_ROOT) else str(self.config.workflow),
+                "comfyui_url": self.config.comfy_url,
+                "variations": self.config.variations,
+                "width": self.config.width,
+                "height": self.config.height,
+            }
+            disk_samples = manifest.setdefault("samples", {})
+            for sample_id, sample in self.samples.items():
+                current = disk_samples.setdefault(sample_id, {})
+                for key in ("seed", "cg", "qwen"):
+                    if key in sample:
+                        current[key] = sample[key]
+            write_json(self.manifest_path, manifest)
+        finally:
+            lock_path.rmdir()
 
     def run(self) -> ProductionStatus:
         cfg = self.config
@@ -612,11 +724,20 @@ class ProductionRunner:
         self.update(status="checking", started_at=utc_now(), message="Checking inputs")
         if not cfg.workflow.exists():
             raise FileNotFoundError(f"Workflow file not found: {cfg.workflow}")
-        if not cfg.comfy_input_dir:
-            raise ValueError("comfy_input_dir is required")
-        if output_has_existing_data(cfg.output_root) and not cfg.overwrite and cfg.start_index == 0:
-            raise FileExistsError(f"Output root already contains data: {cfg.output_root}. Enable overwrite or use resume start_index.")
+        try:
+            workflow_template = read_json(cfg.workflow)
+        except Exception as exc:
+            raise ValueError(f"Workflow JSON is malformed: {cfg.workflow}: {exc}") from exc
+        if not isinstance(workflow_template, dict):
+            raise ValueError(f"Workflow JSON must contain an object: {cfg.workflow}")
+        probe = self.batch_root / ".write_test"
+        try:
+            probe.write_text("ok", encoding="utf-8")
+            probe.unlink()
+        except OSError as exc:
+            raise RuntimeError(f"Batch output directory is not writable: {self.batch_root}: {exc}") from exc
         check_comfy_reachable(cfg.comfy_url)
+        validate_comfy_workflow_dependencies(cfg.comfy_url, workflow_template)
 
         for index in range(cfg.start_index, cfg.start_index + cfg.n):
             if self.cancel_event.is_set():
@@ -626,14 +747,15 @@ class ProductionRunner:
 
             stem = f"meter_{index:04d}"
             seed_text = stem
-            dataset_cg_path = self.dirs["cg"] / f"{stem}.png"
-            dataset_mask_path = self.dirs["masks"] / f"{stem}_mask.png"
-            metadata_path = self.dirs["metadata"] / f"{stem}.json"
-            prompt_path = self.dirs["prompts"] / f"{stem}.txt"
-            comfy_rel = f"cg_meters/{stem}.png"
+            sample_id = f"sample_{index + 1:06d}"
+            sample_cg_dir = self.dirs["cg"] / sample_id
+            dataset_cg_path = sample_cg_dir / "image.png"
+            dataset_mask_path = sample_cg_dir / "image_mask.png"
+            metadata_path = sample_cg_dir / "metadata.json"
+            prompt_path = self.dirs["prompts"] / f"{sample_id}.txt"
 
             try:
-                self.update(status="generating_cg", current_image_index=index, current_variation=0, message=f"Generating CG {stem}")
+                self.update(status="generating_cg", current_image_index=index, current_variation=0, message=f"Preparing CG {sample_id}")
                 def on_cg_attempt(attempt: int, actual_seed: str) -> None:
                     self.update(
                         status="generating_cg",
@@ -643,17 +765,27 @@ class ProductionRunner:
                         message=f"Generating CG {stem}, attempt {attempt}, seed {actual_seed}",
                     )
 
-                comfy_cg_path, cg_export_info = generate_cg_image(
-                    index=index,
-                    width=cfg.width,
-                    height=cfg.height,
-                    requested_seed=seed_text,
-                    comfy_input_dir=cfg.comfy_input_dir,
-                    dataset_cg_path=dataset_cg_path,
-                    dataset_mask_path=dataset_mask_path,
-                    metadata_path=metadata_path,
-                    attempt_callback=on_cg_attempt,
-                )
+                if not cfg.overwrite and dataset_cg_path.exists() and dataset_mask_path.exists() and metadata_path.exists():
+                    validate_cg_png(dataset_cg_path, f"reused {sample_id}")
+                    metadata = read_json(metadata_path)
+                    cg_export_info = {
+                        "requested_seed": seed_text,
+                        "cg_seed_used": str(metadata.get("seed", seed_text)),
+                        "cg_export_attempts": 0,
+                        "cg_export_error_log": [],
+                    }
+                else:
+                    _, cg_export_info = generate_cg_image(
+                        index=index,
+                        width=cfg.width,
+                        height=cfg.height,
+                        requested_seed=seed_text,
+                        dataset_cg_path=dataset_cg_path,
+                        dataset_mask_path=dataset_mask_path,
+                        metadata_path=metadata_path,
+                        debug_dir=self.dirs["cg_debug"] / sample_id,
+                        attempt_callback=on_cg_attempt,
+                    )
                 self.update(
                     latest_cg_image=str(dataset_cg_path),
                     cg_export_attempts=cg_export_info["cg_export_attempts"],
@@ -661,7 +793,23 @@ class ProductionRunner:
                 )
 
                 prompt = generate_prompt(seed=index)
+                prompt_path.parent.mkdir(parents=True, exist_ok=True)
                 prompt_path.write_text(prompt + "\n", encoding="utf-8")
+                remote_subfolder = f"water_meter_pipeline/{cfg.batch_id}/{sample_id}"
+                comfy_rel = upload_comfy_image(cfg.comfy_url, dataset_cg_path, remote_subfolder)
+                mask_rel = upload_comfy_image(cfg.comfy_url, dataset_mask_path, remote_subfolder)
+                sample = self.samples.setdefault(sample_id, {})
+                sample["seed"] = cg_export_info["cg_seed_used"]
+                sample["cg"] = {
+                    "image": relative_to_batch(dataset_cg_path, self.batch_root),
+                    "mask": relative_to_batch(dataset_mask_path, self.batch_root),
+                    "metadata": relative_to_batch(metadata_path, self.batch_root),
+                    "requested_seed": cg_export_info["requested_seed"],
+                    "seed_used": cg_export_info["cg_seed_used"],
+                    "export_attempts": cg_export_info["cg_export_attempts"],
+                }
+                route = {"status": "running", "variations": []}
+                sample["qwen"] = route
 
                 for variation in range(cfg.variations):
                     if self.cancel_event.is_set():
@@ -669,31 +817,22 @@ class ProductionRunner:
 
                     started_at = utc_now()
                     diffusion_seed = random.Random(f"{index}-{variation}").randrange(0, 2**32)
-                    prefix = f"{cfg.output_root.name}/diffusion_outputs/qwen_{stem}_var{variation}"
-                    expected_output_directory = self.output_directory_for_prefix(prefix)
+                    output_dir = self.dirs["ai"] / sample_id
+                    output_name = "image.png" if cfg.variations == 1 else f"image_var{variation:03d}.png"
+                    dataset_diffusion_path = output_dir / output_name
+                    prefix = f"water_meter_pipeline/{cfg.batch_id}/qwen/{sample_id}/var{variation:03d}"
                     cache_buster = f"{stem}_var{variation}_{uuid.uuid4().hex}"
                     final_prompt = f"{prompt}\nCACHE_BUSTER: {cache_buster}"
-                    variation_prompt_path = self.dirs["prompts"] / f"{stem}_var{variation}.txt"
+                    variation_prompt_path = self.dirs["prompts"] / f"{sample_id}_var{variation:03d}.txt"
                     variation_prompt_path.write_text(final_prompt + "\n", encoding="utf-8")
-                    workflow_debug_path = self.dirs["debug_workflows"] / f"workflow_{stem}_var{variation}.json"
+                    workflow_debug_path = self.dirs["debug_workflows"] / f"workflow_{sample_id}_var{variation:03d}.json"
                     record = {
-                        "index": index,
                         "variation_index": variation,
-                        "cg_image_absolute_path": str(comfy_cg_path.resolve()),
-                        "cg_image_comfy_relative_path": comfy_rel,
-                        "cg_mask_absolute_path": cg_export_info["cg_mask_absolute_path"],
-                        "cg_mask_comfy_absolute_path": cg_export_info["cg_mask_comfy_absolute_path"],
-                        "cg_metadata_path": str(metadata_path.resolve()),
-                        "requested_seed": cg_export_info["requested_seed"],
-                        "cg_seed_used": cg_export_info["cg_seed_used"],
-                        "cg_export_attempts": cg_export_info["cg_export_attempts"],
-                        "cg_export_error_log": cg_export_info["cg_export_error_log"],
+                        "image": relative_to_batch(dataset_diffusion_path, self.batch_root),
                         "prompt": final_prompt,
-                        "prompt_path": str(variation_prompt_path.resolve()),
+                        "prompt_path": relative_to_batch(variation_prompt_path, self.batch_root),
                         "diffusion_seed": diffusion_seed,
-                        "comfy_output_prefix": prefix,
-                        "expected_output_directory": str(expected_output_directory.resolve()),
-                        "workflow_debug_path": str(workflow_debug_path.resolve()),
+                        "workflow_debug_path": relative_to_batch(workflow_debug_path, self.batch_root),
                         "prompt_id": "",
                         "execution_cached": None,
                         "execution_cached_nodes": [],
@@ -704,7 +843,8 @@ class ProductionRunner:
                         "started_at": started_at,
                         "finished_at": "",
                     }
-                    self.records.append(record)
+                    route["status"] = "running"
+                    route.setdefault("variations", []).append(record)
                     self.save_manifest()
 
                     try:
@@ -715,11 +855,11 @@ class ProductionRunner:
                             latest_comfy_output_prefix=prefix,
                             current_prompt=final_prompt,
                             current_diffusion_seed=diffusion_seed,
-                            current_output_filename=f"{Path(prefix).name}_*.png",
-                            current_output_directory=str(expected_output_directory.resolve()),
+                            current_output_filename=output_name,
+                            current_output_directory=str(output_dir.resolve()),
                             message=f"Submitting {stem} variation {variation}",
                         )
-                        workflow = prepare_workflow(cfg.workflow, comfy_rel, final_prompt, diffusion_seed, cfg.width, cfg.height, prefix)
+                        workflow = prepare_workflow(cfg.workflow, comfy_rel, mask_rel, final_prompt, diffusion_seed, cfg.width, cfg.height, prefix)
                         write_json(workflow_debug_path, workflow)
                         prompt_id = submit_comfy_workflow(cfg.comfy_url, workflow)
                         record["prompt_id"] = prompt_id
@@ -727,22 +867,20 @@ class ProductionRunner:
                         print(f"[massive_production] workflow_debug_path={workflow_debug_path.resolve()}")
                         self.update(status="waiting_comfy", message=f"Waiting for ComfyUI prompt {prompt_id}")
                         history = wait_for_comfy(cfg.comfy_url, prompt_id, self.cancel_event)
-                        diffusion_path, output_candidates, execution_cached, cached_nodes = require_existing_diffusion_output(history, self.comfy_output_root())
+                        output_candidate, output_candidates, execution_cached, cached_nodes = require_existing_diffusion_output(history)
                         record["execution_cached"] = execution_cached
                         record["execution_cached_nodes"] = cached_nodes
-                        record["history_output_images"] = [
-                            {
-                                **candidate,
-                                "path": str(candidate["path"]),
-                            }
-                            for candidate in output_candidates
-                        ]
-                        record["diffusion_output_path"] = str(diffusion_path)
-                        self.status.latest_diffusion_image = str(diffusion_path)
-                        self.status.current_output_filename = diffusion_path.name
-                        print(f"[massive_production] output filename={diffusion_path.name}")
-                        print(f"[massive_production] resolved output path={diffusion_path}")
-                        print(f"[massive_production] output exists={diffusion_path.exists()}")
+                        record["history_output_images"] = output_candidates
+                        download_comfy_image(cfg.comfy_url, output_candidate, dataset_diffusion_path)
+                        output_stats = png_stats(dataset_diffusion_path)
+                        if output_stats["width"] != cfg.width or output_stats["height"] != cfg.height:
+                            raise RuntimeError(
+                                f"Downloaded ComfyUI output has unexpected dimensions: "
+                                f"{output_stats['width']}x{output_stats['height']}"
+                            )
+                        self.status.latest_diffusion_image = str(dataset_diffusion_path.resolve())
+                        self.status.current_output_filename = dataset_diffusion_path.name
+                        print(f"[massive_production] downloaded output={dataset_diffusion_path.resolve()}")
                         record["status"] = "completed"
                         record["finished_at"] = utc_now()
                         self.status.gallery.append(
@@ -750,15 +888,18 @@ class ProductionRunner:
                                 "index": index,
                                 "variation_index": variation,
                                 "cg_image": str(dataset_cg_path.resolve()),
-                                "diffusion_image": str(diffusion_path) if diffusion_path else "",
+                                "diffusion_image": str(dataset_diffusion_path.resolve()),
                                 "status": "completed",
                             }
                         )
+                        if all(item.get("status") == "completed" for item in route["variations"]):
+                            route["status"] = "completed"
                         self.update(completed_count=self.status.completed_count + 1, status="running", message=f"Completed {stem} var {variation}")
                     except Exception as exc:
                         record["status"] = "failed"
                         record["error_message"] = str(exc)
                         record["finished_at"] = utc_now()
+                        route["status"] = "failed"
                         failed_indices = list(dict.fromkeys([*self.status.failed_indices, index]))
                         self.update(
                             failed_count=self.status.failed_count + 1,
@@ -774,28 +915,19 @@ class ProductionRunner:
                 cg_attempts = exc.attempts if isinstance(exc, CGExportError) else 0
                 requested_seed = exc.requested_seed if isinstance(exc, CGExportError) else seed_text
                 failed_indices = list(dict.fromkeys([*self.status.failed_indices, index]))
-                self.records.append(
-                    {
-                        "index": index,
-                        "variation_index": -1,
-                        "cg_image_absolute_path": str(dataset_cg_path.resolve()),
-                        "cg_image_comfy_relative_path": comfy_rel,
-                        "cg_mask_absolute_path": str(dataset_mask_path.resolve()),
-                        "cg_metadata_path": str(metadata_path.resolve()),
-                        "requested_seed": requested_seed,
-                        "cg_seed_used": "",
-                        "cg_export_attempts": cg_attempts,
-                        "cg_export_error_log": cg_error_log,
-                        "prompt": "",
-                        "diffusion_seed": None,
-                        "comfy_output_prefix": "",
-                        "expected_output_directory": str((cfg.output_root / "diffusion_outputs").resolve()),
-                        "status": "failed",
-                        "error_message": str(exc),
-                        "started_at": utc_now(),
-                        "finished_at": utc_now(),
-                    }
-                )
+                sample = self.samples.setdefault(sample_id, {"seed": requested_seed})
+                sample["cg"] = {
+                    "image": relative_to_batch(dataset_cg_path, self.batch_root),
+                    "mask": relative_to_batch(dataset_mask_path, self.batch_root),
+                    "metadata": relative_to_batch(metadata_path, self.batch_root),
+                    "requested_seed": requested_seed,
+                    "seed_used": "",
+                    "export_attempts": cg_attempts,
+                    "status": "failed",
+                    "error_message": str(exc),
+                    "error_log": cg_error_log,
+                }
+                sample["qwen"] = {"status": "blocked_by_cg_failure", "variations": []}
                 self.update(
                     failed_count=self.status.failed_count + 1,
                     failed_indices=failed_indices,
@@ -804,7 +936,9 @@ class ProductionRunner:
                 )
                 self.save_manifest()
 
-        self.update(status="completed", finished_at=utc_now(), message="Production completed")
+        final_status = "completed_with_failures" if self.status.failed_count else "completed"
+        final_message = "Production completed with failures" if self.status.failed_count else "Production completed"
+        self.update(status=final_status, finished_at=utc_now(), message=final_message)
         self.save_manifest()
         return self.status
 
@@ -816,9 +950,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--width", type=int, default=512)
     parser.add_argument("--height", type=int, default=512)
     parser.add_argument("--workflow", type=Path, default=DEFAULT_WORKFLOW)
-    parser.add_argument("--comfy-url", default="http://127.0.0.1:8188")
-    parser.add_argument("--comfy-input-dir", type=Path, required=True)
-    parser.add_argument("--output-root", type=Path, default=Path("synthetic_data_meter_V1"))
+    parser.add_argument("--comfy-url", default=DEFAULT_COMFY_URL)
+    parser.add_argument("--output-root", type=Path, default=DEFAULT_OUTPUT_ROOT)
+    parser.add_argument("--batch-id", default=DEFAULT_BATCH_ID)
     parser.add_argument("--overwrite", action="store_true")
     parser.add_argument("--start-index", type=int, default=0)
     return parser.parse_args()
@@ -833,8 +967,8 @@ def main() -> None:
         height=args.height,
         workflow=args.workflow,
         comfy_url=args.comfy_url,
-        comfy_input_dir=args.comfy_input_dir,
         output_root=args.output_root,
+        batch_id=args.batch_id,
         overwrite=args.overwrite,
         start_index=args.start_index,
     )

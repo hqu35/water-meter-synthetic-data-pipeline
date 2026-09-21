@@ -1,6 +1,5 @@
 {
   "worker": "flux2",
-  "gpu_device": 2,
   "dashboard_host": "127.0.0.1",
   "dashboard_port": 9000,
   "comfyui_url": "http://127.0.0.1:8188",
