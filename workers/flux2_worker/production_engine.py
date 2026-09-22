@@ -137,56 +137,84 @@ def resolve_workflow_boolean(value: Any, workflow: dict) -> Optional[bool]:
     return primitive_value if isinstance(primitive_value, bool) else None
 
 
-def active_workflow_node_ids(workflow: dict, object_info: dict) -> set[str]:
-    referenced_nodes: set[str] = set()
-    for node in workflow.values():
-        if not isinstance(node, dict):
-            continue
-        for value in (node.get("inputs") or {}).values():
-            linked_node_id = workflow_link_node_id(value, workflow)
-            if linked_node_id is not None:
-                referenced_nodes.add(linked_node_id)
+def materialize_active_workflow(workflow: dict, object_info: dict) -> dict:
+    """Return a new workflow containing only statically selected switch branches."""
+    materialized = copy.deepcopy(workflow)
+
+    while True:
+        resolved_switch_id: Optional[str] = None
+        selected_value: Any = None
+        for node_id, node in materialized.items():
+            if not isinstance(node, dict) or node.get("class_type") != "ComfySwitchNode":
+                continue
+            inputs = node.get("inputs") or {}
+            switch_value = resolve_workflow_boolean(inputs.get("switch"), materialized)
+            if switch_value is None:
+                continue
+            selected_name = "on_true" if switch_value else "on_false"
+            if selected_name not in inputs:
+                raise ValueError(f"ComfySwitchNode {node_id} has no selected input {selected_name}")
+            resolved_switch_id = str(node_id)
+            selected_value = copy.deepcopy(inputs[selected_name])
+            break
+
+        if resolved_switch_id is None:
+            break
+
+        for node in materialized.values():
+            if not isinstance(node, dict) or not isinstance(node.get("inputs"), dict):
+                continue
+            for input_name, value in list(node["inputs"].items()):
+                linked_node_id = workflow_link_node_id(value, materialized)
+                if linked_node_id == resolved_switch_id:
+                    node["inputs"][input_name] = copy.deepcopy(selected_value)
+
+        materialized.pop(resolved_switch_id, None)
 
     output_nodes = {
         str(node_id)
-        for node_id, node in workflow.items()
+        for node_id, node in materialized.items()
         if isinstance(node, dict)
         and bool((object_info.get(str(node.get("class_type", ""))) or {}).get("output_node"))
     }
     if not output_nodes:
-        output_nodes = {str(node_id) for node_id in workflow if str(node_id) not in referenced_nodes}
+        output_nodes = {
+            str(node_id)
+            for node_id, node in materialized.items()
+            if isinstance(node, dict) and node.get("class_type") == "SaveImage"
+        }
+    if not output_nodes:
+        referenced_nodes = {
+            linked_node_id
+            for node in materialized.values()
+            if isinstance(node, dict)
+            for value in (node.get("inputs") or {}).values()
+            if (linked_node_id := workflow_link_node_id(value, materialized)) is not None
+        }
+        output_nodes = {str(node_id) for node_id in materialized if str(node_id) not in referenced_nodes}
 
-    active_nodes: set[str] = set()
+    reachable: set[str] = set()
 
     def visit(node_id: str) -> None:
-        if node_id in active_nodes:
+        if node_id in reachable:
             return
-        node = workflow.get(node_id)
+        node = materialized.get(node_id)
         if not isinstance(node, dict):
             return
-        active_nodes.add(node_id)
-        inputs = node.get("inputs") or {}
-
-        if node.get("class_type") == "ComfySwitchNode":
-            switch_link = workflow_link_node_id(inputs.get("switch"), workflow)
-            if switch_link is not None:
-                visit(switch_link)
-            switch_value = resolve_workflow_boolean(inputs.get("switch"), workflow)
-            if switch_value is not None:
-                selected_name = "on_true" if switch_value else "on_false"
-                selected_link = workflow_link_node_id(inputs.get(selected_name), workflow)
-                if selected_link is not None:
-                    visit(selected_link)
-                return
-
-        for value in inputs.values():
-            linked_node_id = workflow_link_node_id(value, workflow)
+        reachable.add(node_id)
+        for value in (node.get("inputs") or {}).values():
+            linked_node_id = workflow_link_node_id(value, materialized)
             if linked_node_id is not None:
                 visit(linked_node_id)
 
     for output_node_id in output_nodes:
         visit(output_node_id)
-    return active_nodes
+
+    return {
+        str(node_id): node
+        for node_id, node in materialized.items()
+        if str(node_id) in reachable
+    }
 
 
 def validate_comfy_workflow_dependencies(comfy_url: str, workflow: dict) -> dict:
@@ -194,9 +222,14 @@ def validate_comfy_workflow_dependencies(comfy_url: str, workflow: dict) -> dict
         object_info = http_json(f"{comfy_url.rstrip('/')}/object_info", timeout=30)
     except Exception as exc:
         raise RuntimeError(f"Could not read ComfyUI node/model inventory from /object_info: {exc}") from exc
-    class_types = sorted({str(node.get("class_type")) for node in workflow.values() if isinstance(node, dict)})
+    materialized_workflow = materialize_active_workflow(workflow, object_info)
+    class_types = sorted({
+        str(node.get("class_type"))
+        for node in materialized_workflow.values()
+        if isinstance(node, dict)
+    })
     missing_nodes = [class_type for class_type in class_types if class_type not in object_info]
-    active_nodes = active_workflow_node_ids(workflow, object_info)
+    active_nodes = set(materialized_workflow)
     required_models: set[str] = set()
     optional_models: set[str] = set()
     missing_required_models: set[str] = set()
@@ -245,6 +278,7 @@ def validate_comfy_workflow_dependencies(comfy_url: str, workflow: dict) -> dict
         "required_models": sorted(required_models),
         "optional_models": sorted(optional_models),
         "missing_optional_models": sorted(missing_optional_models),
+        "materialized_workflow": materialized_workflow,
     }
 
 
@@ -759,7 +793,7 @@ def keep_flux_guidance_safe(workflow: dict) -> None:
 
 
 def prepare_workflow(
-    workflow_path: Path,
+    workflow_template: dict,
     image_rel: str,
     mask_rel: str,
     prompt: str,
@@ -768,7 +802,7 @@ def prepare_workflow(
     height: int,
     prefix: str,
 ) -> dict:
-    workflow = copy.deepcopy(read_json(workflow_path))
+    workflow = copy.deepcopy(workflow_template)
     validate_flux2_reference_graph(workflow)
     set_required_input(workflow, "46", "image", image_rel, "LoadImage")
     set_required_input(workflow, "126", "image", mask_rel, "LoadImage")
@@ -1070,7 +1104,8 @@ class ProductionRunner:
         except OSError as exc:
             raise RuntimeError(f"Batch output directory is not writable: {self.batch_root}: {exc}") from exc
         check_comfy_reachable(cfg.comfy_url)
-        validate_comfy_workflow_dependencies(cfg.comfy_url, workflow_template)
+        preflight_report = validate_comfy_workflow_dependencies(cfg.comfy_url, workflow_template)
+        workflow_template = preflight_report["materialized_workflow"]
 
         for index in range(cfg.start_index, cfg.start_index + cfg.n):
             if self.cancel_event.is_set():
@@ -1198,7 +1233,7 @@ class ProductionRunner:
                             message=f"Submitting {stem} variation {variation}",
                         )
                         workflow = prepare_workflow(
-                            cfg.workflow,
+                            workflow_template,
                             comfy_rel,
                             mask_rel,
                             final_prompt,

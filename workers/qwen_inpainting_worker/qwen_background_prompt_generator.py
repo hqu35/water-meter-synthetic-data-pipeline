@@ -37,9 +37,25 @@ def generate_prompt(seed: Optional[int] = None, scene_category: Optional[str] = 
         [
             "Edit only the white mask region. The black mask region is the protected CG meter and must remain pixel-exact and unchanged.",
             f"Background: {scene.description}.",
+            (
+                "Create a spatially legible installation environment rather than a backdrop. "
+                "Include at least three scene-appropriate geometric or semantic cues, such as "
+                "intersecting wall-floor or ground planes, receding pipes with elbows or fittings, "
+                "brackets or supports, wall penetrations, structural edges, nearby utility hardware, "
+                "layered depth, varied surface texture, and contact shadows, without covering the protected meter."
+            ),
             f"Continue the visible pipe connectors naturally into {mounting}; {lighting}. Add realistic contact shadows around the meter boundary.",
+            (
+                "Do not use a plain solid-color, featureless gray or brown, studio-like, textureless, "
+                "single-plane, or empty background without recognizable utility context."
+            ),
             "Do not alter the protected meter or add dirt, droplets, scratches, reflections, or material changes to it.",
-            "Do not add extra meters, gauges, dials, number displays, text, logos, valves, hands, tools, wires, or foreground obstructions.",
+            (
+                "Do not add extra meters, gauges, dials, number displays, text, logos, hands, tools, "
+                "wires, or foreground obstructions over the protected meter. Environmental valves "
+                "and fittings may appear only as part of plausible surrounding pipe infrastructure; "
+                "do not attach invented controls to the protected meter."
+            ),
         ]
     )
 
