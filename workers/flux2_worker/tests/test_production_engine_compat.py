@@ -22,9 +22,11 @@ from production_engine import (  # noqa: E402
     ProductionRunner,
     append_cache_buster,
     http_json,
+    materialize_active_workflow,
     prepare_workflow,
     require_existing_diffusion_output,
     raise_for_history_error,
+    submit_comfy_workflow,
     validate_comfy_workflow_dependencies,
     validate_reference_pair,
 )
@@ -66,6 +68,15 @@ class ProductionEngineCompatibilityTests(unittest.TestCase):
         self.assertNotIn(lora, report["required_models"])
         self.assertIn(lora, report["optional_models"])
         self.assertIn(lora, report["missing_optional_models"])
+        materialized = report["materialized_workflow"]
+        self.assertNotIn("68:89", materialized)
+        self.assertNotIn("68:90", materialized)
+        self.assertNotIn("68:92", materialized)
+        self.assertNotIn("68:93", materialized)
+        self.assertNotIn("68:94", materialized)
+        self.assertEqual(materialized["68:22"]["inputs"]["model"], ["68:12", 0])
+        self.assertEqual(materialized["68:48"]["inputs"]["steps"], ["68:91", 0])
+        self.assertNotIn(lora, json.dumps(materialized))
 
     def test_preflight_turbo_enabled_rejects_missing_lora(self) -> None:
         lora = "Flux_2-Turbo-LoRA_comfyui.safetensors"
@@ -81,19 +92,54 @@ class ProductionEngineCompatibilityTests(unittest.TestCase):
             report = validate_comfy_workflow_dependencies("http://comfy.test", workflow)
         self.assertIn(lora, report["required_models"])
         self.assertNotIn(lora, report["optional_models"])
+        materialized = report["materialized_workflow"]
+        self.assertIn("68:89", materialized)
+        self.assertIn(lora, json.dumps(materialized))
+        self.assertEqual(materialized["68:22"]["inputs"]["model"], ["68:89", 0])
+        self.assertEqual(materialized["68:48"]["inputs"]["steps"], ["68:90", 0])
+        self.assertNotIn("68:92", materialized)
+        self.assertNotIn("68:93", materialized)
+        self.assertNotIn("68:94", materialized)
 
-    def test_preflight_rejects_missing_active_base_model(self) -> None:
+    def test_preflight_rejects_missing_active_base_model_in_both_modes(self) -> None:
         base_model = "flux2_dev_fp8mixed.safetensors"
-        workflow, object_info = flux_workflow_with_object_info(False, {base_model})
-        with mock.patch("production_engine.http_json", return_value=object_info):
-            with self.assertRaisesRegex(RuntimeError, "missing model files.*flux2_dev_fp8mixed"):
-                validate_comfy_workflow_dependencies("http://comfy.test", workflow)
+        for turbo_enabled in (False, True):
+            with self.subTest(turbo_enabled=turbo_enabled):
+                workflow, object_info = flux_workflow_with_object_info(turbo_enabled, {base_model})
+                with mock.patch("production_engine.http_json", return_value=object_info):
+                    with self.assertRaisesRegex(RuntimeError, "missing model files.*flux2_dev_fp8mixed"):
+                        validate_comfy_workflow_dependencies("http://comfy.test", workflow)
+
+    def test_materialization_does_not_mutate_source_workflow(self) -> None:
+        workflow, object_info = flux_workflow_with_object_info(False, set())
+        original = json.loads(json.dumps(workflow))
+        materialized = materialize_active_workflow(workflow, object_info)
+        self.assertEqual(workflow, original)
+        self.assertIsNot(materialized, workflow)
+
+    def test_submit_posts_materialized_workflow(self) -> None:
+        workflow, object_info = flux_workflow_with_object_info(False, set())
+        materialized = materialize_active_workflow(workflow, object_info)
+        captured = {}
+
+        def fake_http_json(_url: str, data=None, timeout=20):
+            captured.update(data or {})
+            return {"prompt_id": "prompt-materialized"}
+
+        with mock.patch("production_engine.http_json", side_effect=fake_http_json):
+            prompt_id = submit_comfy_workflow("http://comfy.test", materialized)
+        self.assertEqual(prompt_id, "prompt-materialized")
+        self.assertIs(captured["prompt"], materialized)
+        self.assertNotIn("68:89", captured["prompt"])
+        self.assertNotIn("Flux_2-Turbo-LoRA_comfyui.safetensors", json.dumps(captured["prompt"]))
 
     def test_dual_reference_runtime_workflow(self) -> None:
         prompt = generate_prompt(0, "outdoor_soil")
         final_prompt = append_cache_buster(prompt, "meter_0000_var0_test")
+        source_workflow, object_info = flux_workflow_with_object_info(False, set())
+        materialized = materialize_active_workflow(source_workflow, object_info)
         workflow = prepare_workflow(
-            WORKER_ROOT / "workflow/image_flux2_api.json",
+            materialized,
             "cg_meters/meter_0000.png",
             "cg_meters/meter_0000_mask.png",
             final_prompt,
@@ -121,6 +167,9 @@ class ProductionEngineCompatibilityTests(unittest.TestCase):
             "PROHIBITED CHANGES:",
         ]:
             self.assertIn(section, workflow["68:6"]["inputs"]["text"])
+        self.assertIn("component-level material identity", workflow["68:6"]["inputs"]["text"])
+        self.assertIn("each visible meter component", workflow["68:6"]["inputs"]["text"])
+        self.assertIn("rather than reproducing the exact synthetic shading or PBR response", workflow["68:6"]["inputs"]["text"])
 
     def test_reference_pair_validation(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -255,7 +304,10 @@ class ProductionEngineCompatibilityTests(unittest.TestCase):
                 Image.new("RGB", (64, 64), (30, 60, 90)).save(destination)
 
             with mock.patch("production_engine.check_comfy_reachable"), \
-                    mock.patch("production_engine.validate_comfy_workflow_dependencies"), \
+                    mock.patch(
+                        "production_engine.validate_comfy_workflow_dependencies",
+                        side_effect=lambda _url, workflow: {"materialized_workflow": workflow},
+                    ), \
                     mock.patch("production_engine.upload_comfy_image", side_effect=lambda _url, path, sub: f"{sub}/{path.name}"), \
                     mock.patch("production_engine.submit_comfy_workflow", return_value="prompt-1"), \
                     mock.patch("production_engine.wait_for_comfy", return_value=history), \

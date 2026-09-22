@@ -63,8 +63,11 @@ Flux workflow model filenames:
 
 The default workflow has `Enable 8 steps lora = false`, so
 `Flux_2-Turbo-LoRA_comfyui.safetensors` is optional. It is required only when
-the Turbo switch is enabled. Flux preflight follows the selected lazy switch
-branch when classifying model files as required or optional.
+the Turbo switch is enabled. Before preflight and submission, the worker
+materializes the selected switch branches and removes unreachable nodes. The
+Turbo LoRA filename is therefore absent from the submitted graph when Turbo is
+disabled, while enabling Turbo retains the LoRA node and makes the file a
+required preflight dependency.
 
 `ComfySwitchNode` is a ComfyUI core node, not a third-party custom node. The
 installed ComfyUI version must be recent enough to provide it; node-class
@@ -77,14 +80,39 @@ Qwen workflow model filenames:
 - `qwen_image_vae.safetensors`
 - `Qwen-Image-InstantX-ControlNet-Inpainting.safetensors`
 
-Qwen additionally requires the non-core class types
-`ControlNetInpaintingAliMamaApply` and `ResizeImageMaskNode`.
+The current validated official ComfyUI installation provided
+`ComfySwitchNode`, `ControlNetInpaintingAliMamaApply`, and
+`ResizeImageMaskNode` without external custom-node packages. Use a sufficiently
+recent official ComfyUI checkout. At startup the worker queries `/object_info`
+and reports missing class types or referenced model filenames before submitting
+a job.
 
-The exported workflows do not identify the package repositories that provide
-those class types, so this project deliberately does not guess package names.
-Use ComfyUI's missing-node tooling for the target installation. At startup the
-worker queries `/object_info` and reports missing class types or referenced
-model filenames before submitting a job.
+## Clean Linux machine notes
+
+The end-to-end pipeline was validated on an NVIDIA L40S 48GB with PyTorch
+`2.8.0+cu128`. This is a validated example, not a universal hardware or version
+requirement. `torch`, `torchvision`, and `torchaudio` must come from mutually
+compatible releases and CUDA builds. The validated package set was:
+
+```text
+torch       2.8.0+cu128
+torchvision 0.23.0+cu128
+torchaudio  2.8.0+cu128
+```
+
+For that exact CUDA 12.8 set, the matching installation command is:
+
+```bash
+python3 -m pip install \
+  torch==2.8.0 torchvision==0.23.0 torchaudio==2.8.0 \
+  --index-url https://download.pytorch.org/whl/cu128
+```
+
+The CG exporter also requires a Chrome/Chromium process with CDP enabled before
+a worker starts generation. The worker launch scripts do not start this browser.
+Install and start it by following
+[`synthetic_core/cg_exporter/README.md`](../synthetic_core/cg_exporter/README.md).
+The default worker expectation is `CDP_ENDPOINT=http://127.0.0.1:9222`.
 
 ## Commands
 

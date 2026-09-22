@@ -13,10 +13,21 @@ from PIL import Image, ImageDraw
 WORKER_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(WORKER_ROOT))
 
+from qwen_background_prompt_generator import generate_prompt  # noqa: E402
 from production_engine import ProductionConfig, ProductionRunner  # noqa: E402
 
 
 class QwenPortabilityContractTests(unittest.TestCase):
+    def test_prompt_requires_spatially_legible_environment(self) -> None:
+        prompt = generate_prompt(0, "utility_room")
+        self.assertIn("spatially legible installation environment rather than a backdrop", prompt)
+        self.assertIn("at least three scene-appropriate geometric or semantic cues", prompt)
+        self.assertIn("single-plane", prompt)
+        self.assertIn("featureless gray or brown", prompt)
+        self.assertIn("Environmental valves and fittings may appear", prompt)
+        self.assertIn("protected CG meter", prompt)
+        self.assertIn("must remain pixel-exact and unchanged", prompt)
+
     def test_portable_batch_manifest_and_mask_input(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)

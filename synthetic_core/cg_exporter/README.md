@@ -10,10 +10,18 @@ From this directory:
 
 ```bash
 npm ci
+npx playwright install chromium
+npx playwright install-deps chromium
 ```
 
+The last command installs Linux system libraries required by Chromium and may
+need elevated package-manager privileges. The two Playwright commands can also
+be combined as `npx playwright install --with-deps chromium`.
+
 The browser renderer uses the vendored Three.js modules under `vendor/`. The
-Node exporter uses the `playwright` package and an installed Google Chrome.
+Node exporter uses the `playwright` package and an installed Chrome/Chromium
+browser. Installing the npm package alone does not guarantee that the matching
+browser binary or its Linux shared libraries are present.
 
 ## Start visible Chrome with CDP
 
@@ -21,6 +29,7 @@ macOS:
 
 ```bash
 "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
+  --remote-debugging-address=127.0.0.1 \
   --remote-debugging-port=9222 \
   --user-data-dir=/tmp/water-meter-cdp
 ```
@@ -28,13 +37,22 @@ macOS:
 Linux (adjust the Chrome executable name if necessary):
 
 ```bash
-google-chrome --remote-debugging-port=9222 \
+google-chrome \
+  --remote-debugging-address=127.0.0.1 \
+  --remote-debugging-port=9222 \
   --user-data-dir=/tmp/water-meter-cdp
 ```
 
 Use a dedicated `--user-data-dir`; modern Chrome does not enable remote
 debugging for the normal user profile. The default CDP endpoint is
 `http://127.0.0.1:9222` and can be changed with `CDP_ENDPOINT`.
+Chrome/Chromium must already be running at that endpoint before a worker begins
+CG generation.
+
+If the temporary profile contains a stale `SingletonLock`, first confirm that
+no Chrome/Chromium process is using `/tmp/water-meter-cdp`. Only then is it safe
+to delete that temporary profile and restart the browser. Never delete a normal
+browser profile to resolve this issue.
 
 ## Export one sample
 
