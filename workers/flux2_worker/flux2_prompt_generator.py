@@ -81,7 +81,8 @@ def generate_prompt(
             "STRUCTURE AND ANNOTATIONS:",
             (
                 "Use Reference 1 as the exact meter design, annotation, component-layout, "
-                "camera-viewpoint, and underlying material-identity reference."
+                "and camera-viewpoint reference, and as a visual reference for the "
+                "component-level material identity."
             ),
             (
                 "Preserve the meter geometry, digit register window, every digit, printed text, "
@@ -97,9 +98,12 @@ def generate_prompt(
                 "and annotations."
             ),
             (
-                "Retain approximately the same underlying colors, texture identity, and material "
-                "character established by the CG reference, while enriching physically plausible "
-                "roughness, reflections, wear, depth, and tonal variation."
+                "Use the rendered CG appearance to infer the material identity and texture "
+                "character of each visible meter component. Preserve a similar material family, "
+                "approximate base color, and recognizable texture character for each component, "
+                "while re-expressing roughness, reflections, wear, lighting, and camera response "
+                "with realistic physical variation rather than reproducing the exact synthetic "
+                "shading or PBR response."
             ),
             f"Glass lighting: {glass_lighting}.",
             f"Glass surface condition: {glass_surface}.",

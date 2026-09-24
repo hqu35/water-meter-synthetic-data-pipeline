@@ -1,10 +1,6 @@
 from __future__ import annotations
 
-import os
 import sys
-
-
-os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 
 
 def main() -> None:

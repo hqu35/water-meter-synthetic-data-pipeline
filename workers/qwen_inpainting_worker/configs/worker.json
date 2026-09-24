@@ -1,9 +1,8 @@
 {
   "worker": "qwen_inpainting",
-  "gpu_device": 3,
   "dashboard_host": "127.0.0.1",
   "dashboard_port": 9001,
-  "comfyui_url": "http://127.0.0.1:8191",
+  "comfyui_url": "http://127.0.0.1:8188",
   "workflow": "workflow/qwen_inpainting_api.json",
   "workflow_inputs": {
     "image_node": "71",
